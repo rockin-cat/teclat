@@ -111,7 +111,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
 
   // Melodic cards have no rhythm of their own: their points go on a steady grid (see melodicSlots).
   function melodicExpectations({ card, startTick }) {
-    const { slots } = melodicSlots(card.contour.length, transport.meter ?? {});
+    const { slots } = melodicSlots(card.contour.length, { ...(transport.meter ?? {}), points: card.layout?.points ?? null, contour: card.contour });
     return {
       notes: card.contour.map((rank, index) => ({
         index,
@@ -495,12 +495,22 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     const status = (s) => (model.demo ? 'demo' : s);
     if (model.notes) {
       const suggested = contourNotes(chord, model.card.contour);
-      return model.notes.map((n, i) => ({
-        startTick: n.tick,
-        endTick: n.endTick,
-        status: status(n.status),
-        notes: [model.demo ? suggested[i] : (n.midi ?? suggested[i])],
-      }));
+      const contour = model.card.contour;
+      const items = [];
+      model.notes.forEach((n, i) => {
+        // A flat line is one note held to its second point, not two attacks.
+        if (i > 0 && contour[i] === contour[i - 1] && items.length) {
+          items.at(-1).endTick = n.endTick;
+          return;
+        }
+        items.push({
+          startTick: n.tick,
+          endTick: n.endTick,
+          status: status(n.status),
+          notes: [model.demo ? suggested[i] : (n.midi ?? suggested[i])],
+        });
+      });
+      return items;
     }
     const keys =
       level === 1 ? [noteAtOrAbove(chord.root, 60)]

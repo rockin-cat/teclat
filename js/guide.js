@@ -83,6 +83,9 @@ const SECTIONS = [
       <h4>Els suports visuals es retiren sols</h4>
       <p>A mesura que puja el <b>nivell de banda</b>, el joc treu ajudes: al nivell 2 el teclat de la pantalla <b>es fa més petit</b>; a partir del nivell 3 (de memòria) la <b>imatge del teclat</b> desapareix a les missions que no pinten tecles, i les cartes es fan més grosses. Sempre es pot recuperar el teclat amb el botó <b>🎹</b> de la barra de dalt. Les cartes de la roda es veuen <b>sempre totes</b> (una per compàs): mentre sona la música, <b>les que ja s'han tocat s'apaguen</b> i la vista va cap endavant, com quan es llegeix una partitura; en acabar, tornen a encendre's totes amb les marques.</p>
 
+      <h4>Les lliçons són demostracions</h4>
+      <p>Cada pantalla d'una lliçó mostra la carta i, de seguida, <b>el piano la toca</b> amb la pilota a sobre, en bucle, mentre el text explica què s'hi veu. Amb cartes de melodia, les línies llargues sonen llargues i les planes són una sola nota mantinguda. A les missions amb <b>diverses cartes diferents</b> no es fa escoltar només la primera: s'hi comença directament, i «♪ Primer escolta-les totes» (o la demostració que torna sola quan un intent no surt) fa que el piano toqui <b>totes les cartes</b> tal com s'han de tocar, a les mateixes caselles. Les files que es toquen dues vegades porten els <b>signes de repetició</b> de la partitura. La banda <b>canvia d'estil</b> de missió en missió al camí ROCKIN i d'una prova a l'altra a la prova de nivell.</p>
+
       <h4>Pantalla completa</h4>
       <p>A Juga, el botó <b>⛶ Pantalla completa</b> (o la tecla <b>F</b>) deixa només la carta, el teclat i una línia de text; Espai i Esc continuen funcionant i el joc segueix avançant sol, així una sessió de classe va gairebé sense ratolí. Hi entra <b>tot el joc</b>, també el mapa i els menús, de manera que el ratolí continua funcionant si surts de la missió. Esc en surt.</p>
 
@@ -104,7 +107,7 @@ const SECTIONS = [
         <li><b>Patrons amb les cartes</b>: acompanyar amb ritmes diferents mirant les cartes.</li>
         <li><b>Sense suport visual</b>: acompanyar de memòria, mirant els companys.</li>
         <li><b>Toques amb la banda</b>: una cançó sencera sense parar; si t'equivoques, tornes a entrar.</li>
-        <li><b>Tries i combines</b>: tries els patrons a cada moment i els combines (arpegis, contorn melòdic, dues mans).</li>
+        <li><b>Tries i combines</b>: tries els patrons a cada moment i els combines (arpegis, girs melòdics, dues mans).</li>
       </ol>
 
       <h4>Quan només es toca una nota</h4>
@@ -117,11 +120,11 @@ const SECTIONS = [
       <p>A la barra de cada missió hi ha sempre <b>↩ Anterior</b> i <b>⏭ Salta</b>: no cal superar una missió per passar endavant o tornar enrere.</p>
       <p>Quan escoltes l'exemple, l'<b>últim compàs de l'exemple ja fa de compte enrere</b> (hi sona el clic i diu «Ara tu!»): no s'afegeix cap compàs extra.</p>
 
-      <h4>⭐ Nivell 2: arpegis i contorn melòdic</h4>
+      <h4>⭐ Nivell 2: arpegis i girs melòdics</h4>
       <p>Quan s'acaba el camí (també el de cada cançó) s'obre el nivell 2, amb les <b>cartes melòdiques</b>: punts units per una línia; cada punt és una nota de l'acord, tocada d'una en una. Si la línia puja, la nota és més aguda; si baixa, més greu; a la mateixa altura, la mateixa nota. Qualsevol nota de l'acord val si segueix la línia: es pot començar per qualsevol nota (qualsevol inversió). Les cartes melòdiques no marquen ritme; al joc, perquè es puguin escoltar i tocar amb la banda, les notes van sobre un pols constant: 2 notes, una cada mig compàs; 3–4 notes, una per temps; 5–8 notes, una per mig temps (l'última sona fins al final del compàs). La pilota bota sempre almenys a cada temps.</p>
       <ol start="7">
         <li><b>Arpegis</b>: lliçó de les cartes de línia, <b>la roda nota a nota</b> (fonamental, tercera i quinta, primer amb la tecla que toca pintada i després de memòria; el joc espera), cartes de <b>dues notes</b> (amunt-avall, avall-amunt, repetides), la primera de tres notes i l'objectiu.</li>
-        <li><b>Contorn melòdic</b>: cartes de <b>tres notes</b> (avall, amunt, que tornen) i, al final, de <b>quatre</b>; l'objectiu i la banda.</li>
+        <li><b>Girs melòdics</b> (el que al projecte en diem contorn melòdic): una lliçó amb demostracions i les cartes ordenades pels girs, com al document del joc: <b>dues notes</b> (només puja, només baixa, puja i torna), <b>tres notes</b> (amunt, avall, que tornen, amb salts) i <b>quatre</b> (amunt, avall); l'objectiu i la banda.</li>
       </ol>
       <p>Amb ajuda, el teclat pinta les notes de l'acord <b>sense números</b> (els números es reserven per als dits i els graus). A la demostració, les tecles s'il·luminen amb el <b>color del grau</b> de l'acord, i així es veu que les notes van juntes per acords. Una X amb ↕ vol dir que la nota no anava cap on marca la línia. El nivell 2 es toca amb la mà dreta, encara que s'hagin triat dues mans.</p>
       <h4>Tipus de missions</h4>
@@ -196,7 +199,7 @@ const SECTIONS = [
         <li>Cartes intermèdies (el temps partit en dos)</li>
         <li>Cartes difícils (subdivisions més petites)</li>
         <li>Arpegis (cartes melòdiques)</li>
-        <li>Contorn melòdic</li>
+        <li>Girs melòdics</li>
       </ol>
       <p>Les cartes de ritme es van complicant: quan les fàcils surten bé, passa a les intermèdies i després a les difícils. Cada vegada que torna a un aprenentatge fa servir cartes diferents.</p>
       <h4>Com decideix</h4>

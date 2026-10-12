@@ -932,7 +932,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       ...path.worlds.flatMap((world, w) => {
         const levelHead = world.level2 && !path.worlds[w - 1]?.level2
           ? el('div', { className: 'play-level-head' }, [
-              el('strong', { textContent: '⭐ Nivell 2: arpegis i contorn melòdic' }),
+              el('strong', { textContent: '⭐ Nivell 2: arpegis i girs melòdics' }),
               el('span', { textContent: 'Les notes de l\'acord d\'una en una, seguint la línia de les cartes melòdiques. Es fa amb la mà dreta.' }),
             ])
           : null;
@@ -2020,7 +2020,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     { title: 'Patrons amb les cartes', can: 'Podries acompanyar amb <b>ritmes diferents</b> mirant les cartes.', next: 'Fer-ho de memòria, sense mirar el teclat ni les cartes.' },
     { title: 'Sense suport visual', can: 'Podries acompanyar <b>de memòria</b>, mirant els companys en comptes de la pantalla.', next: 'Aguantar una cançó sencera sense parar.' },
     { title: 'Toques amb la banda', can: 'Podries fer <b>una cançó sencera sense parar</b>: si t\'equivoques, tornes a entrar.', next: 'Triar tu els patrons i combinar-los.' },
-    { title: 'Tries i combines', can: 'Podries <b>triar els patrons a cada moment</b> i combinar-los al teu gust (i fer arpegis, contorn melòdic o dues mans).', next: null },
+    { title: 'Tries i combines', can: 'Podries <b>triar els patrons a cada moment</b> i combinar-los al teu gust (i fer arpegis, girs melòdics o dues mans).', next: null },
   ];
 
   /** The band level a mission proves, when it's passed. */
@@ -2229,8 +2229,12 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     let i = 0;
     const done = () => finishMission(3, { title: 'Lliçó acabada!', text: 'Ja saps llegir aquestes cartes. Ara, a tocar-les!' });
     setFocus(world.twoHands ? 'both' : 'card');
+    // Every slide is a demonstration with music: the card is shown, the piano
+    // plays it and the ball bounces on it, on a loop, while the text explains.
+    // Reading and hearing at once is what makes the card understandable.
     const show = () => {
       stopSession();
+      cancelAutoNext();
       const slide = slides[i];
       const card = cardByName(slide.card);
       showScore(true);
@@ -2240,38 +2244,48 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       view = { marks: world.twoHands ? handMarks(rightNow, leftHandVoicing(rootChord, world.level === 1 ? 'bass' : leftMode())) : new Map(), message: '' };
       const last = i === slides.length - 1;
       const next = () => {
+        stopSession();
         if (last) done();
         else {
           i++;
           show();
         }
       };
-      setPanel({
-        kicker: `Lliçó · ${i + 1} de ${slides.length}`,
-        title: slide.title,
-        text: slide.text,
-        buttons: [
-          button('♪ Escolta-la', () => {
-            setStatus({ kicker: 'Escolta', text: 'Mira la pilota i escolta quan sona el piano.', buttons: [button('Atura', show, 'ghost')] });
-            step = { space: show, escape: show };
-            const two = Boolean(world.twoHands);
-            runMusic({
-              bars: [{ card, chord: rootChord, kind: 'demo', name: '' }, { card, chord: rootChord, kind: 'demo', name: '' }],
-              rows: [{ bars: [0, 1] }],
-              columns: 2,
-              level: world.level,
-              voicings: two ? [0, 1].map(() => (world.level === 1 ? [rightHandVoicing(rootChord)[0]] : rightHandVoicing(rootChord))) : null,
-              hands: two ? { left: leftMode(), leftVoicings: [0, 1].map(() => leftHandVoicing(rootChord, world.level === 1 ? 'bass' : leftMode())) } : null,
-              meter: world.meter,
-              style: world.style,
-              onEnd: show,
-            });
-          }, 'ghost'),
-          i > 0 ? button('← Enrere', () => { i--; show(); }, 'ghost') : null,
-          button(last ? 'Entesos! ✓' : 'Següent →', next),
-        ],
-      });
-      step = { space: next };
+      const back = () => {
+        stopSession();
+        i--;
+        show();
+      };
+      const buttons = (playing) => [
+        i > 0 ? button('← Enrere', back, 'ghost') : null,
+        playing ? button('Atura', () => { stopSession(); panel(); }, 'ghost small') : button('♪ Escolta-la', () => listen(), 'ghost'),
+        button(last ? 'Entesos! ✓' : 'Següent →', next),
+      ];
+      const kicker = `Lliçó · ${i + 1} de ${slides.length}`;
+      const panel = () => {
+        setPanel({ kicker, title: slide.title, text: slide.text, buttons: buttons(false) });
+        step = { space: next, escape: next };
+      };
+      const listen = () => {
+        const two = Boolean(world.twoHands);
+        setStatus({ kicker: `${kicker} · escolta i mira la pilota`, text: `<b>${slide.title}.</b> ${slide.text}`, tone: 'listen', buttons: buttons(true) });
+        step = { space: next, escape: () => { stopSession(); panel(); } };
+        runMusic({
+          bars: [{ card, chord: rootChord, kind: 'demo', name: '' }, { card, chord: rootChord, kind: 'demo', name: '' }],
+          rows: [{ bars: [0, 1] }],
+          columns: 2,
+          level: world.level,
+          voicings: two ? [0, 1].map(() => (world.level === 1 ? [rightHandVoicing(rootChord)[0]] : rightHandVoicing(rootChord))) : null,
+          hands: two ? { left: leftMode(), leftVoicings: [0, 1].map(() => leftHandVoicing(rootChord, world.level === 1 ? 'bass' : leftMode())) } : null,
+          meter: world.meter,
+          style: world.style,
+          // On a loop, until the next slide: a short breath between rounds.
+          onEnd: () => setTimeout(() => { if (mission?.slides === slides && slides[i] === slide && !missionScreen.hidden) listen(); }, 700),
+        });
+      };
+      panel();
+      // The demonstration starts on its own: the slide is an animation, not a text.
+      setTimeout(() => { if (mission?.slides === slides && slides[i] === slide && !missionScreen.hidden && !session) listen(); }, 500);
     };
     show();
   }
@@ -3369,8 +3383,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         ? { ...base, world: melodicWorld, type: 'mix', title: 'Arpegis', cards: rotate(c.melodic.arp, 3) }
         : { ...base, world: melodicWorld, type: 'pattern', title: 'Arpegis', card: rotate(c.melodic.arp, 1)[0], help: 'shape' },
       contour: probe
-        ? { ...base, world: melodicWorld, type: 'mix', title: 'Contorn melòdic', cards: rotate(c.melodic.contour, 3) }
-        : { ...base, world: melodicWorld, type: 'pattern', title: 'Contorn melòdic', card: rotate(c.melodic.contour, 1)[0], help: 'shape' },
+        ? { ...base, world: melodicWorld, type: 'mix', title: 'Girs melòdics', cards: rotate(c.melodic.contour, 3) }
+        : { ...base, world: melodicWorld, type: 'pattern', title: 'Girs melòdics', card: rotate(c.melodic.contour, 1)[0], help: 'shape' },
     }[skill.id];
   }
 
@@ -3812,7 +3826,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     };
 
     // A timed try over the backing; `onEnd(ratio)`.
-    const timed = ({ cards, chords, level, onEnd }) => {
+    const timed = ({ cards, chords, level, onEnd, style = 'rock' }) => {
       const playBars = [];
       const rows = [];
       for (const c of cards) {
@@ -3843,7 +3857,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         columns: chords.length === 1 ? 4 : chords.length,
         level,
         meter: '4/4',
-        style: 'rock',
+        style,
         tempo: SPEEDS[1].tempo,
         help: 'none',
         voicings,
@@ -3895,18 +3909,19 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       });
     });
 
-    const wheelTest = (k, cards) => () => timed({
+    const wheelTest = (k, cards, style) => () => timed({
       cards,
       chords: WHEEL,
       level: 2,
+      style,
       onEnd: (ratio) => (ratio >= 0.75 ? passedTest(k) : failedTest(k, `${Math.round(ratio * cards.length * WHEEL.length)} de ${cards.length * WHEEL.length} compassos nets.`)),
     });
 
-    const test4 = () => intro(3, 'Toca la roda <b>Do – Sol – La m – Fa</b> seguint dues cartes, amb la música i sense ajuda al teclat.', wheelTest(3, [card(1), card(2)]));
+    const test4 = () => intro(3, 'Toca la roda <b>Do – Sol – La m – Fa</b> seguint dues cartes, amb la música i sense ajuda al teclat.', wheelTest(3, [card(1), card(2)], 'reggae'));
 
-    const test5 = () => intro(4, 'Dues <b>cartes més difícils</b> sobre la roda: contratemps i silencis a mig compàs. Sense ajuda.', wheelTest(4, [card(7), card(3)]));
+    const test5 = () => intro(4, 'Dues <b>cartes més difícils</b> sobre la roda: contratemps i silencis a mig compàs. Sense ajuda.', wheelTest(4, [card(7), card(3)], 'funk'));
 
-    const test6 = () => intro(5, 'Dues cartes amb <b>rodones partides</b> (dues notes en un temps, o la nota a la segona meitat). Si això et surt, ja saps més que mig camí.', wheelTest(5, [card(11), card(13)]));
+    const test6 = () => intro(5, 'Dues cartes amb <b>rodones partides</b> (dues notes en un temps, o la nota a la segona meitat). Si això et surt, ja saps més que mig camí.', wheelTest(5, [card(11), card(13)], 'ballad'));
 
     TESTS_GO = [test1, test2, test3, test4, test5, test6];
     test1();
@@ -4353,7 +4368,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const type = mission.type;
     const level = world.level;
     const meter = parseTimeSignature(world.meter ?? '4/4');
-    const style = mission.style ?? world.style;
+    // The ROCKIN path changes the style of the band from mission to mission, so
+    // the same wheel keeps sounding new; songs and custom paths keep their own.
+    const rotation = ['rock', 'reggae', 'ballad', 'funk', 'shuffle', 'bossa', 'cumbia', 'hiphop'];
+    const onRockin = (path.base ?? path) === ROCKIN_PATH && !mission.study && !mission.jam;
+    const style = mission.style ?? (onRockin && mission.index >= 0 ? rotation[mission.index % rotation.length] : world.style);
     const baseTempo = Math.round((mission.tempo ?? speed.tempo) * (mission.tempo ? speed.tempo / 76 : 1) * (meter.compound ? 0.8 : 1));
     const help = type === 'pattern' ? mission.help : 'none';
     const tempoNow = () => Math.max(44, baseTempo - (tempoDrop.get(mission.id) ?? 0));
@@ -4452,6 +4471,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const rowLength = (row) => (row.chordBars ?? row.bars).length;
     const demoCount = listenBoth ? rowLength(rowsOf[0]) + rowLength(rowsOf[1]) : chords.length === 1 ? 1 : rowLength(rowsOf[0]);
     const canListen = type !== 'band';
+    // Several different cards: hearing only the first row would mislead, so the
+    // try starts without the example; listening (on demand, or when a try went
+    // badly) then plays every card.
+    const multi = cards.length > 1 && type !== 'structure';
+    const listenMode = multi ? 'all' : true;
 
     const preview = () => {
       showScore(true, true);
@@ -4487,8 +4511,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           help === 'shape' || boosted ? '' : 'Mira les cartes, no el teclat.',
         ].filter(Boolean).join('<br>'),
         seconds: 7,
-        start: () => play(canListen),
-        buttons: [canListen && tried ? button('Sense escoltar', () => play(false), 'ghost small') : null],
+        start: () => play(canListen && !multi),
+        buttons: [
+          canListen && tried && !multi ? button('Sense escoltar', () => play(false), 'ghost small') : null,
+          canListen && multi ? button('♪ Primer escolta-les totes', () => play('all'), 'ghost small') : null,
+        ],
       });
     };
 
@@ -4496,6 +4523,10 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const helpFor = () => (help === 'none' && helpBoost.get(mission.id) ? 'shape' : help);
 
     const play = (listenFirst) => {
+      // Listening to everything ('all'): the piano plays every card of the try on
+      // the same tiles, and then you play them. For missions with several
+      // different cards, where hearing only the first row would mislead.
+      if (listenFirst === 'all') return playAll();
       // Listening to the whole wheel: the last bar of the example counts you in.
       // Listening to a single card: one extra bar on the dominant, so you come in
       // resolving instead of hearing the same chord twice.
@@ -4529,10 +4560,26 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       for (const row of rowsOf) rows.push({ label: row.label, repeat: row.repeat, perChord: row.perChord, chordBars: row.chordBars?.map((b) => b + offset), bars: row.bars.map((b) => b + offset) });
       const allVoicings = listenFirst ? [...voicings.slice(0, demo.length), ...ready.map(() => voicings[0]), ...voicings] : voicings;
       const allLeft = two ? (listenFirst ? [...leftVoicings.slice(0, demo.length), ...ready.map(() => leftVoicings[0]), ...leftVoicings] : leftVoicings) : null;
+      runTry({ bars, rows, allVoicings, allLeft, listenedAll: false });
+    };
 
+    /** Every card of the try, played by the piano first, on the same tiles. */
+    const playAll = () => {
+      const tileOf = (k) => (playBars[k].repeatOf === undefined ? k : playBars[k].repeatOf);
+      const tiles = playBars.map((_, k) => k).filter((k) => playBars[k].repeatOf === undefined);
+      const demoIndex = new Map(tiles.map((t, i) => [t, i]));
+      const demo = tiles.map((t, i) => ({ ...playBars[t], kind: 'demo', tag: i === tiles.length - 1 ? 'Ara tu!' : '', lead: i === tiles.length - 1 }));
+      const bars = [...demo, ...playBars.map((bar, k) => ({ ...bar, repeatOf: demoIndex.get(tileOf(k)) }))];
+      const rows = rowsOf.map((row) => ({ label: row.label, repeat: row.repeat, bars: row.bars.map((b) => demoIndex.get(b)) }));
+      const allVoicings = [...tiles.map((t) => voicings[t]), ...voicings];
+      const allLeft = two ? [...tiles.map((t) => leftVoicings[t]), ...leftVoicings] : null;
+      runTry({ bars, rows, allVoicings, allLeft, listenedAll: true });
+    };
+
+    const runTry = ({ bars, rows, allVoicings, allLeft, listenedAll }) => {
       const buttons = () => [button('Atura', () => intro(), 'ghost')];
       const statusFor = (phase) => {
-        if (phase === 'demo') setStatus({ kicker: 'Escolta', text: `El piano toca ${demoCount === 1 ? 'la carta' : listenBoth ? 'l\'estrofa i la tornada' : type === 'structure' ? 'la primera part' : 'la roda sencera'}. <b>Encara no toquis</b>: mira la pilota.`, tone: 'listen', buttons: buttons() });
+        if (phase === 'demo') setStatus({ kicker: 'Escolta', text: `El piano toca ${listenedAll ? 'totes les cartes, tal com les tocaràs' : demoCount === 1 ? 'la carta' : listenBoth ? 'l\'estrofa i la tornada' : type === 'structure' ? 'la primera part' : 'la roda sencera'}. <b>Encara no toquis</b>: mira la pilota.`, tone: 'listen', buttons: buttons() });
         else if (phase === 'ready') setStatus({ kicker: 'A punt', text: '<b>Ara tu!</b> Compta i entra a la primera carta.', tone: 'ready', buttons: buttons() });
         else if (phase === 'count') setStatus({ kicker: 'A punt', text: 'Compta amb la música…', tone: 'ready', buttons: buttons() });
         else if (phase === 'end') setStatus({ kicker: 'Fi', text: 'Escolta com acaba…', buttons: [] });
@@ -4597,18 +4644,18 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
               type === 'band' && recoveries ? `Has tornat a entrar ${recoveries} ${recoveries === 1 ? 'vegada' : 'vegades'} després d'un error: així es toca en grup!` : '',
               tempoNote,
               helpNote,
-              showDemo ? `<b>Abans de tornar-hi t'ho ensenyo:</b> el piano toca ${demoCount === 1 ? 'la carta' : 'la roda'} i la pilota et va mostrant on cau cada nota.${inARow >= 2 ? ' Mira-t\'ho amb calma, que no corre pressa.' : ''}` : '',
+              showDemo ? `<b>Abans de tornar-hi t'ho ensenyo:</b> el piano toca ${multi ? 'totes les cartes, tal com les has de tocar,' : demoCount === 1 ? 'la carta' : 'la roda'} i la pilota et va mostrant on cau cada nota.${inARow >= 2 ? ' Mira-t\'ho amb calma, que no corre pressa.' : ''}` : '',
               clean < results.length ? 'Mira les marques de les cartes per veure què ha passat.' : '',
             ].filter(Boolean).join(' '),
             tips: clean === results.length ? [] : tipsFor(stats),
             detail: level === 1 ? null : { results },
             groove: { style, tempo, chords: progression, meter: world.meter ?? '4/4' },
-            retry: () => play(showDemo),
+            retry: () => play(showDemo ? listenMode : false),
             retryLabel: showDemo
               ? `♪ T'ho ensenyo i tornem-hi${tempoNow() < tempo ? ` (més lent, ${tempoNow()})` : ''}`
               : tempoNow() < tempo ? `↻ Torna-hi més lent (${tempoNow()})` : '↻ Torna-ho a provar',
             extra: canListen
-              ? [showDemo ? button('Torna-hi sense escoltar', () => play(false), 'ghost') : button('♪ Escolta i toca', () => play(true), 'ghost')]
+              ? [showDemo ? button('Torna-hi sense escoltar', () => play(false), 'ghost') : button(multi ? '♪ Escolta totes les cartes i toca' : '♪ Escolta i toca', () => play(listenMode), 'ghost')]
               : [],
           });
         },

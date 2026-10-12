@@ -78,7 +78,7 @@ export function createScore(container) {
     for (const row of rows) {
       // A row of one card played once per chord ("una per acord") uses the same
       // badge as a repeated row: the card is one, the chords go by on it.
-      const repeatBadge = row.repeat > 1 || row.perChord ? el('span', { className: 'score-repeat', textContent: row.perChord ? 'una carta per acord' : `×${row.repeat}` }) : null;
+      const repeatBadge = row.repeat > 1 || row.perChord ? el('span', { className: 'score-repeat', textContent: row.perChord ? 'una carta per acord' : `${row.repeat} voltes` }) : null;
       // One card for the whole wheel: the chords still show, in order, so you
       // can see how much is left to play and what is coming.
       const chips = (row.chordBars ?? []).map((index) => {
@@ -101,7 +101,12 @@ export function createScore(container) {
       rowNode.chordBars = row.chordBars ?? [];
       const grid = el('div', { className: 'score-grid' });
       if (row.bars.length > columns) grid.style.setProperty('--score-columns', String(row.bars.length));
-      rowNode.append(grid);
+      // A row played more than once wears the repeat signs of written music
+      // (thick and thin bar with two dots), so the habit transfers to a score.
+      const repeatSign = (end) => el('span', { className: `score-repsign${end ? ' end' : ''}`, title: `Es repeteix ${row.repeat} vegades` }, end
+        ? [el('b'), el('i', { className: 'thin' }), el('i', { className: 'thick' })]
+        : [el('i', { className: 'thick' }), el('i', { className: 'thin' }), el('b')]);
+      rowNode.append(row.repeat > 1 ? el('div', { className: 'score-repeat-wrap' }, [repeatSign(false), grid, repeatSign(true)]) : grid);
       for (const index of row.bars) {
         const bar = bars[index];
         const canvas = el('canvas', { className: 'score-canvas' });
@@ -215,7 +220,7 @@ export function createScore(container) {
           badge.classList.toggle('second', turn > 1);
         }
       } else if (badge) {
-        badge.textContent = `×${tile.rowNode.repeat} · ${pass === 1 ? '1a' : `${pass}a`} volta`;
+        badge.textContent = `${pass === 1 ? '1a' : `${pass}a`} volta de ${tile.rowNode.repeat}`;
         badge.classList.toggle('second', pass > 1);
       }
     }
@@ -264,16 +269,18 @@ export function createScore(container) {
       g.melodic = true;
       g.maxY = Math.max(...pts.map((pt) => pt.y));
       // The ball bounces on a steady pulse: on each point when it is played, and in place while the last one rings.
-      const { slots, hops } = melodicSlots(pts.length, { pulses });
+      const { slots, hops } = melodicSlots(pts.length, { pulses, points: card.layout.points, contour: card.contour });
       pts.forEach((pt, i) => {
         const f = slots[i].f0;
         g.anchors.push({ f, x: pt.x });
         g.spots.push({ x: pt.x, y: pt.y, r: ring, f });
       });
+      // The ball keeps to the top of the card: it marks when, the line says which way.
+      const topY = Math.min(...pts.map((pt) => pt.y)) - ring - BALL_R - 2;
       for (const f of hops) {
         let k = 0;
         while (k < slots.length - 1 && slots[k + 1].f0 <= f + 1e-9) k++;
-        g.landings.push({ f, x: pts[k].x, y: pts[k].y - ring - BALL_R - 2 });
+        g.landings.push({ f, x: pts[k].x, y: topY });
       }
       const lastX = Math.min(w - 4, pts.at(-1).x + (w - pts.at(-1).x) / 2);
       g.landings.push({ f: 1, x: lastX, y: g.landings.at(-1).y });

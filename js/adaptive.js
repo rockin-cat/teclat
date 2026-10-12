@@ -55,12 +55,12 @@ export function skillsFor(kit) {
   if (kit.cards.hard?.length) skills.push({ id: 'hard', stage: 9, label: 'Cartes difícils', icon: '¼' });
   if (kit.cards.melodic) {
     skills.push({ id: 'arp', stage: 10, label: 'Arpegis', icon: '⤴' });
-    skills.push({ id: 'contour', stage: 11, label: 'Contorn melòdic', icon: '〰' });
+    skills.push({ id: 'contour', stage: 11, label: 'Girs melòdics', icon: '〰' });
   }
   return skills;
 }
 
-export const STAGE_NAMES = ['Notes i cartes', 'Acords', 'Canvis', 'A tempo', 'Ritme', 'Silencis i notes llargues', 'Cartes seguides', 'Banda', 'Cartes intermèdies', 'Cartes difícils', 'Arpegis', 'Contorn melòdic'];
+export const STAGE_NAMES = ['Notes i cartes', 'Acords', 'Canvis', 'A tempo', 'Ritme', 'Silencis i notes llargues', 'Cartes seguides', 'Banda', 'Cartes intermèdies', 'Cartes difícils', 'Arpegis', 'Girs melòdics'];
 
 const known = (state, id) => state.skills[id] && state.skills[id].m !== null && state.skills[id].m !== undefined;
 const mastery = (state, id) => (known(state, id) ? state.skills[id].m : null);

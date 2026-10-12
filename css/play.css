@@ -3378,3 +3378,52 @@ button.play-hands-chip b {
   color: var(--play-green);
   font-weight: 700;
 }
+
+/* ---- Repeat signs on a row played twice ----------------------------------------------------------- */
+
+.score-repeat-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.score-repeat-wrap .score-grid {
+  flex: 1;
+  min-width: 0;
+}
+
+.score-repsign {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 6% 0;
+}
+
+.score-repsign i {
+  display: block;
+  align-self: stretch;
+  width: 2px;
+  background: var(--play-ink);
+  border-radius: 1px;
+}
+
+.score-repsign i.thick {
+  width: 6px;
+}
+
+.score-repsign b {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score-repsign b::before,
+.score-repsign b::after {
+  width: 6px;
+  height: 6px;
+  content: '';
+  background: var(--play-ink);
+  border-radius: 50%;
+}

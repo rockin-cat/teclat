@@ -112,7 +112,11 @@ export function createDeck(pool, { progressionLength, changeEvery }) {
  * take a pulse each, 5–8 half a pulse. The last note rings to the end of the
  * bar. `hops` are the steady grid moments for the ball.
  */
-export function melodicSlots(n, { pulses = 4, compound = false } = {}) {
+export function melodicSlots(n, { pulses = 4, compound = false, points = null, contour = null } = {}) {
+  // Cards drawn with lines of different lengths (a long note and a short one)
+  // take their timing from the drawing itself; the others sit on a steady grid.
+  const drawn = points && contour && points.length === n && contour.length === n ? proportionalSlots(points, contour, pulses) : null;
+  if (drawn) return drawn;
   const grid = pulses * (compound ? 3 : 2);
   let unit = 0;
   for (const u of [grid / 2, compound ? 3 : 2, 1]) {
@@ -132,4 +136,51 @@ export function melodicSlots(n, { pulses = 4, compound = false } = {}) {
   const hops = [];
   for (let k = 0; k < grid; k += step) hops.push(k / grid);
   return { slots, hops };
+}
+
+/**
+ * Timing read from the drawing: each note starts where its point is and lasts
+ * until the next one; a flat line (two points with the same height) is one
+ * note held from its first point to its second. Only used when the drawing is
+ * clearly uneven (a short line next to a long one); evenly spaced points keep
+ * the steady grid, which is easier to play along.
+ * Returns null when the drawing is even.
+ */
+function proportionalSlots(points, contour, pulses) {
+  const xs = points.map((p) => p.x);
+  const gaps = xs.slice(1).map((x, i) => x - xs[i]).filter((g) => g > 0.005);
+  if (gaps.length < 2) return null;
+  const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length);
+  const hasHold = contour.some((r, i) => i > 0 && r === contour[i - 1]);
+  if (sd / mean < 0.35 && !hasHold) return null;
+  // Events: one per note; the second point of a flat line closes the event.
+  const events = [];
+  const ownerOf = []; // point index -> event index
+  contour.forEach((rank, i) => {
+    if (i > 0 && rank === contour[i - 1] && events.length && events.at(-1).endX === null) {
+      events.at(-1).endX = xs[i];
+      ownerOf[i] = events.length - 1;
+      return;
+    }
+    events.push({ startX: xs[i], endX: null, first: i });
+    ownerOf[i] = events.length - 1;
+  });
+  events.forEach((e, k) => {
+    if (e.endX === null) e.endX = k + 1 < events.length ? events[k + 1].startX : Math.min(1, e.startX + 0.12);
+  });
+  const x0 = events[0].startX;
+  const span = Math.max(1e-6, events.at(-1).endX - x0);
+  const f = (x) => Math.max(0, Math.min(1, (x - x0) / span));
+  const slots = points.map((_, i) => {
+    const e = events[ownerOf[i]];
+    const a = f(e.startX);
+    const b = f(e.endX);
+    // The closing point of a flat line: it should still be down near the end.
+    return i === e.first ? { f0: a, f1: b } : { f0: a + (b - a) * 0.8, f1: b, hold: true };
+  });
+  // The ball lands on every note and keeps the pulse through long notes.
+  const hops = new Set(events.map((e) => f(e.startX)));
+  for (let k = 0; k < pulses; k++) hops.add(k / pulses);
+  return { slots, hops: [...hops].sort((a, b) => a - b).filter((h, i, arr) => i === 0 || h - arr[i - 1] > 0.04) };
 }
