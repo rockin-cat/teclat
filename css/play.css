@@ -2811,8 +2811,10 @@ button.play-hands-chip b {
 /* Full screen in Juga: only the card, the keyboard and one line of text. */
 /* Full screen puts the whole game (mission and menus) in the screen, so the
    mouse keeps working when you go back to the map. */
-.play-view:fullscreen {
+.play-view:fullscreen,
+.play-view.is-fullscreen {
   overflow: auto;
+  padding: 0;
   background: var(--play-bg, #f7f4ef);
 }
 
@@ -2820,6 +2822,7 @@ button.play-hands-chip b {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-sizing: border-box;
   height: 100vh;
   max-width: none;
   overflow: hidden;
