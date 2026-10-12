@@ -169,6 +169,33 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   // The drums already carry the pulse: the click while playing is off unless the
   // teacher asks for it (a new key, so old settings don't bring the click back).
   let metronome = storage.get('rockin.play.click') === 'yes';
+  // The student's own keyboard ([low, high] MIDI), so the keys on screen are the
+  // same as under the hands, like a real piano app. null: whatever fits the screen.
+  let ownRange = (() => {
+    try {
+      const v = JSON.parse(storage.get('rockin.play.keys.range') ?? 'null');
+      return Array.isArray(v) && v.length === 2 && v[1] - v[0] >= 12 ? v : null;
+    } catch {
+      return null;
+    }
+  })();
+  const saveOwnRange = (v) => {
+    ownRange = v;
+    storage.set('rockin.play.keys.range', JSON.stringify(v));
+  };
+  const KEYBOARD_PRESETS = [
+    { keys: 25, range: [48, 72] },
+    { keys: 32, range: [41, 72] },
+    { keys: 37, range: [48, 84] },
+    { keys: 49, range: [36, 84] },
+    { keys: 61, range: [36, 96] },
+    { keys: 76, range: [28, 103] },
+    { keys: 88, range: [21, 108] },
+  ];
+  const noteWithOctave = (n) => `${SOLFEGE[pitchClass(n)]}${Math.floor(n / 12) - 1}`;
+  const ownRangeText = () => (ownRange ? `${ownRange[1] - ownRange[0] + 1} tecles · de ${noteWithOctave(ownRange[0])} a ${noteWithOctave(ownRange[1])}` : 'Automàtic (segons la pantalla)');
+  /** The keys to put on screen: the student's own keyboard when it is known, otherwise what the mission asks. */
+  const showKeys = (wanted) => keyboard.setKeyRange(ownRange ?? wanted, Boolean(ownRange));
   let grooveOn = localStorage.getItem('rockin.play.groove') !== 'off'; // the band between challenges
   // Finger numbers on the painted keys: off unless the teacher wants them (the
   // numbers can be read as degrees, and every teacher fingers chords their way).
@@ -1039,6 +1066,66 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     ]);
   }
 
+  // ---- The student's own keyboard -----------------------------------------------------------------------
+  // The keys on screen are the same as the real ones: pick the size, or play the
+  // lowest and the highest key and the game takes note.
+
+  function ownKeyboardBox(back) {
+    const current = el('p', { className: 'play-note', innerHTML: `Ara: <b>${ownRangeText()}</b>.` });
+    const presets = el('div', { className: 'play-keysizes' }, [
+      ...[{ keys: 0, range: null }, ...KEYBOARD_PRESETS].map((preset) => {
+        const on = preset.range ? ownRange && ownRange[0] === preset.range[0] && ownRange[1] === preset.range[1] : !ownRange;
+        const b = el('button', { type: 'button', className: `play-chip${on ? ' on' : ''}`, textContent: preset.keys ? `${preset.keys} tecles` : 'Automàtic' });
+        b.addEventListener('click', () => {
+          saveOwnRange(preset.range);
+          back();
+        });
+        return b;
+      }),
+    ]);
+    return el('div', { className: 'play-keyboard-own' }, [
+      el('h4', { textContent: '🎹 El meu teclat' }),
+      el('p', { className: 'play-note', textContent: 'Perquè el teclat de la pantalla sigui idèntic al que tens sota les mans: les mateixes tecles, de la més greu a la més aguda.' }),
+      current,
+      presets,
+      el('div', { className: 'play-buttons left' }, [button('🎹 Detecta\'l tocant', () => showKeyCalibration(back), 'ghost small')]),
+    ]);
+  }
+
+  function showKeyCalibration(back) {
+    let low = null;
+    const render = (title, text, note = '', tone = '') => {
+      setChildren(mapScreen,
+        el('div', { className: 'play-world play-welcome' }, [
+          el('div', { className: 'welcome-art', textContent: '🎹' }),
+          el('h2', { textContent: title }),
+          el('p', { innerHTML: text }),
+          note ? el('p', { className: `play-note${tone ? ` ${tone}` : ''}`, innerHTML: note }) : null,
+          el('div', { className: 'play-buttons' }, [button('← Enrere', back, 'ghost')]),
+        ]),
+      );
+    };
+    const ask = (note = '', tone = '') => (low === null
+      ? render('Toca la tecla més greu', 'La primera tecla de l\'esquerra del teu teclat, <b>una de sola</b>.', note, tone)
+      : render('Ara la més aguda', `Més greu: <b>${noteWithOctave(low)}</b>. Ara toca l\'última tecla de la dreta.`, note, tone));
+    step = {
+      noteOn: ({ note }) => {
+        if (low === null) {
+          low = note;
+          return ask();
+        }
+        if (note - low < 12) return ask(`<b>${noteWithOctave(note)}</b> és massa a prop de la més greu. Toca l\'última tecla de la dreta.`, 'bad');
+        saveOwnRange([low, note]);
+        step = { space: back };
+        render('Teclat desat', `<b>${ownRangeText()}</b>. A partir d\'ara, el teclat de la pantalla és el teu.`, '', 'good');
+        setTimeout(back, 1600);
+      },
+      noteOff: () => {},
+      escape: back,
+    };
+    ask();
+  }
+
   // ---- The shared library of the diagram generator ----------------------------------------------------
   // Songs the teachers share from https://rockin-cat.github.io/Generador-diagrames/
   // open here as a path: the same code opens both.
@@ -1528,6 +1615,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           }),
         ]),
         showFingers ? fingeringTable() : null,
+        ownKeyboardBox(() => showTeacher()),
         el('p', { className: 'play-note', innerHTML: 'La <b>Sessió</b> (progressions lliures i reptes per treballar a classe) és a la portada: <b>⌂ Inici → Sessió</b>.' }),
       ]),
       adaptiveSummary(),
@@ -1803,7 +1891,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     stopSession();
     cancelAutoNext();
     mission = typeof index === 'object' ? { ...index, index: -1 } : { ...path.missions[index], index };
-    keyboard.setKeyRange(mission.world?.twoHands ? TWO_HANDS_RANGE : [48, 84]);
+    showKeys(mission.world?.twoHands ? TWO_HANDS_RANGE : [48, 84]);
     const worldIndex = path.worlds.indexOf(mission.world);
     mapScreen.hidden = true;
     missionScreen.hidden = false;
@@ -2862,7 +2950,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     mission = { id: `jam:${song.key}`, type: 'band', title: 'Toca amb la banda', world, index: -1, step: 0, jam: true };
     mapScreen.hidden = true;
     missionScreen.hidden = false;
-    keyboard.setKeyRange(two ? TWO_HANDS_RANGE : [48, 84]);
+    showKeys(two ? TWO_HANDS_RANGE : [48, 84]);
     feedback = new Map();
     view = { marks: new Map(), message: '' };
     missionStars.textContent = '';
@@ -3587,9 +3675,50 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     showScore(false);
     feedback = new Map();
     view = { marks: new Map(), message: '' };
-    const TESTS = ['Ritme', 'Acords', 'Canvis', 'La roda amb cartes'];
-    // Where each test would place the student, so «Comença aquí» always works.
-    const PLACE_AT = ['ritme-lliçó', 'roda-do', 'roda-do-sol', 'rr-1'];
+    const TESTS = ['Ritme', 'Acords', 'Canvis', 'La roda amb cartes', 'Cartes difícils', 'Temps partits'];
+    // Where each test would place the student when it is the one that does not
+    // come out («Comença aquí» always works); passing them all goes further.
+    const PLACE_AT = ['ritme-lliçó', 'roda-do', 'roda-do-sol', 'rr-1', 'cançó-1', 'mitges-lliçó'];
+    const PLACE_ALL = 'inv-do';
+    // One try that goes wrong does not decide anything: every test can be
+    // repeated once, and the test can go on anyway. The level comes from the
+    // whole picture: the first test that failed after the last one passed.
+    const outcome = []; // per test: true (passed) | false (failed) | undefined (skipped)
+    const retried = new Set();
+    const placeFromOutcomes = () => {
+      const lastPass = outcome.reduce((best, v, k) => (v === true ? k : best), -1);
+      const next = outcome.findIndex((v, k) => k > lastPass && v === false);
+      const passed = outcome.filter((v) => v === true).length;
+      if (next === -1) return place(lastPass === TESTS.length - 1 ? PLACE_ALL : PLACE_AT[lastPass + 1], passed);
+      return place(PLACE_AT[next], passed);
+    };
+    const passedTest = (k) => {
+      outcome[k] = true;
+      if (k + 1 < TESTS.length) TESTS_GO[k + 1]();
+      else placeFromOutcomes();
+    };
+    const failedTest = (k, text) => {
+      outcome[k] = false;
+      stopSession();
+      cancelAutoNext();
+      view = { marks: new Map(), message: '' };
+      const canRetry = !retried.has(k);
+      setPanel({
+        kicker: `Prova ${k + 1} de ${TESTS.length} · ${TESTS[k]}`,
+        title: 'Aquesta no ha sortit',
+        text: `${text} Una prova que no surt no decideix res tota sola: ${canRetry ? 'pots <b>repetir-la</b>, ' : ''}pots <b>continuar</b> amb les següents (si surten, compten) o <b>començar a jugar</b> aquí.`,
+        tone: 'bad',
+        buttons: [
+          canRetry ? button('↻ Repeteix la prova', () => {
+            retried.add(k);
+            TESTS_GO[k]();
+          }) : null,
+          button('⏭ Continua la prova', () => (k + 1 < TESTS.length ? TESTS_GO[k + 1]() : placeFromOutcomes()), canRetry ? 'ghost' : 'primary'),
+          button(`▶ Comença aquí: ${ROCKIN_PATH.missions[Math.max(0, indexOf(PLACE_AT[k]))]?.world?.title ?? ''}`, () => placeFromOutcomes(), 'ghost'),
+        ],
+      });
+      step = { space: () => (canRetry ? (retried.add(k), TESTS_GO[k]()) : TESTS_GO[k + 1]?.() ?? placeFromOutcomes()) };
+    };
     const hudFor = (k) => {
       hud.replaceChildren(
         el('div', { className: 'play-hud-text' }, [el('small', { textContent: 'Prova de nivell' }), el('strong', { textContent: `${k + 1}. ${TESTS[k]}` })]),
@@ -3600,8 +3729,12 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         // Never stuck: skip a test, or stop here and start playing at this level.
         hudTools(
           k > 0 ? button('↩ Prova anterior', () => TESTS_GO[k - 1](), 'ghost small') : null,
-          button('⏭ Salta la prova', () => (k + 1 < TESTS.length ? TESTS_GO[k + 1]() : place('cançó-1', k)), 'ghost small'),
-          button('▶ Comença aquí', () => place(PLACE_AT[k], k), 'ghost small'),
+          button('⏭ Salta la prova', () => {
+            outcome[k] = undefined;
+            if (k + 1 < TESTS.length) TESTS_GO[k + 1]();
+            else placeFromOutcomes();
+          }, 'ghost small'),
+          button('▶ Comença aquí', () => place(PLACE_AT[k], outcome.filter((v) => v === true).length), 'ghost small'),
         ),
       );
       missionStars.textContent = '';
@@ -3627,7 +3760,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       view = { marks: new Map(), message: '' };
       setPanel({
         kicker: 'Prova de nivell',
-        title: passed === TESTS.length ? 'Ja en saps molt!' : passed ? 'Molt bé!' : 'Som-hi des del principi!',
+        title: passed === TESTS.length ? 'Ja en saps molt!' : passed || index > 0 ? 'Molt bé!' : 'Som-hi des del principi!',
         big: [el('div', { className: 'play-target good' }, [
           el('small', { textContent: 'Començaràs a' }),
           el('strong', { textContent: target.world.title }),
@@ -3659,7 +3792,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const intro = (k, text, start) => {
       cancelAutoNext();
       hudFor(k);
-      setFocus(k === 0 || k === 3 ? 'card' : 'keys');
+      setFocus([0, 3, 4, 5].includes(k) ? 'card' : 'keys');
       view = { marks: new Map(), message: '' };
       const go = () => {
         cancelAutoNext();
@@ -3722,17 +3855,17 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         onEnd: ({ results }) => onEnd(results.filter((r) => r.clean).length / results.length),
       });
     };
-    // One card and one note: two bars are enough, so the test stays short.
-    const rhythmRows = () => timed({ cards: [card(2)], chords: ['C', 'C'], level: 1, onEnd: (ratio) => (ratio >= 0.75 ? test2() : place('ritme-lliçó', 0)) });
+    // Rhythm: two cards (a silence and a long note) on one note, four bars.
+    const rhythmRows = () => timed({ cards: [card(2), card(6)], chords: ['C', 'C'], level: 1, onEnd: (ratio) => (ratio >= 0.75 ? passedTest(0) : failedTest(0, `${Math.round(ratio * 4)} de 4 compassos nets.`)) });
 
-    const test1 = () => intro(0, 'Toca el <b>Do</b> seguint la carta, amb la música. Primer l\'escoltes una vegada.', rhythmRows);
+    const test1 = () => intro(0, 'Toca el <b>Do</b> seguint dues cartes, amb la música. Primer les escoltes una vegada.', rhythmRows);
 
     const test2 = () => intro(1, 'Construeix quatre acords <b>sense ajuda</b>: Do, Sol, La m i Fa. Van un darrere l\'altre, i <b>abans de cada un el joc s\'atura i et diu quin toca ara</b>. Les tres notes alhora, <b>en l\'ordre que vulguis</b>: si ja els inverteixes, també val.', () => {
       const list = ['C', 'G', 'Am', 'F'];
       let k = 0;
       let good = 0;
       const nextChord = () => {
-        if (k >= list.length) return good >= 3 ? test3() : place('roda-do', 1);
+        if (k >= list.length) return good >= 3 ? passedTest(1) : failedTest(1, `${good} de 4 acords construïts.`);
         const symbol = list[k];
         buildRound({
           symbol,
@@ -3758,15 +3891,24 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         columns: symbols.length,
         kicker: 'Prova de nivell · Canvis',
         intro: 'Sense ajuda.',
-        onDone: ({ mistakes, hints }) => (mistakes + hints <= 1 ? test4() : place('roda-do-sol', 2)),
+        onDone: ({ mistakes, hints }) => (mistakes + hints <= 1 ? passedTest(2) : failedTest(2, `${mistakes + hints} ${mistakes + hints === 1 ? 'errada' : 'errades'} a la roda.`)),
       });
     });
 
-    const test4 = () => intro(3, 'Toca la roda <b>Do – Sol – La m – Fa</b> seguint dues cartes, amb la música i sense ajuda al teclat.', () =>
-      timed({ cards: [card(1), card(2)], chords: WHEEL, level: 2, onEnd: (ratio) => (ratio >= 0.75 ? place('cançó-1', 4) : place('rr-1', 3)) }),
-    );
+    const wheelTest = (k, cards) => () => timed({
+      cards,
+      chords: WHEEL,
+      level: 2,
+      onEnd: (ratio) => (ratio >= 0.75 ? passedTest(k) : failedTest(k, `${Math.round(ratio * cards.length * WHEEL.length)} de ${cards.length * WHEEL.length} compassos nets.`)),
+    });
 
-    TESTS_GO = [test1, test2, test3, test4];
+    const test4 = () => intro(3, 'Toca la roda <b>Do – Sol – La m – Fa</b> seguint dues cartes, amb la música i sense ajuda al teclat.', wheelTest(3, [card(1), card(2)]));
+
+    const test5 = () => intro(4, 'Dues <b>cartes més difícils</b> sobre la roda: contratemps i silencis a mig compàs. Sense ajuda.', wheelTest(4, [card(7), card(3)]));
+
+    const test6 = () => intro(5, 'Dues cartes amb <b>rodones partides</b> (dues notes en un temps, o la nota a la segona meitat). Si això et surt, ja saps més que mig camí.', wheelTest(5, [card(11), card(13)]));
+
+    TESTS_GO = [test1, test2, test3, test4, test5, test6];
     test1();
   }
 
@@ -5077,7 +5219,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     missionScreen.hidden = false;
     showScore(false);
     showKeyboard(true);
-    keyboard.setKeyRange([48, 84]);
+    showKeys([48, 84]);
     feedback = new Map();
     missionStars.textContent = '';
     setFocus('keys');
@@ -5329,7 +5471,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       // Playing the keyboard while the countdown runs doesn't stop it: you can
       // try the chord out and the next challenge still arrives on its own.
       if (session?.demo) {
-        // Playing during the example: remind to wait.
+        // The entrance played a touch early, while the example still sounds,
+        // is the first note of the try: it goes to the judge. Anything else
+        // during the example is a reminder to wait.
+        if (!session.transport.paused && session.evaluator.entersSoon?.(message.timeStamp)) {
+          session.evaluator.noteOn(message);
+          return;
+        }
         const b = session.transport.positionAt().bar;
         score.shake(Math.max(0, b));
         return;
@@ -5338,7 +5486,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       step?.noteOn?.(message);
     },
     noteOff(message) {
-      if (session && !session.demo && !session.transport.paused) session.evaluator.noteOff(message);
+      // Also during the example: the judge ignores keys it never saw go down.
+      if (session && !session.transport.paused) session.evaluator.noteOff(message);
       step?.noteOff?.(message);
       if (!session) feedback.delete(message.note);
     },

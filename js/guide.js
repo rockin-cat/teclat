@@ -42,12 +42,14 @@ const SECTIONS = [
         <li>Finalment, <b>Per on comences?</b> «Comença pel principi» o la <b>🎯 prova de nivell</b>.</li>
       </ul>
       <h4>Prova de nivell</h4>
-      <p>Quatre proves curtes que s'aturen a la primera que no se supera. L'alumne comença just allà; els mons d'abans queden oberts per repassar.</p>
+      <p>Sis proves curtes. Una prova que no surt <b>no decideix res tota sola</b>: es pot <b>repetir una vegada</b>, <b>continuar</b> amb les següents (si surten, compten) o <b>començar a jugar</b> en aquell punt. El nivell surt del conjunt: l'alumne comença a la primera prova que no ha superat després de l'última superada; els mons d'abans queden oberts per repassar.</p>
       <ol>
-        <li><b>Ritme</b>: tocar el Do seguint una carta amb música (75% de compassos nets).</li>
-        <li><b>Acords</b>: construir Do, Sol, La m i Fa sense ajuda (3 de 4 sense errors).</li>
-        <li><b>Canvis</b>: la roda Do–Sol–La m–Fa–Do acord per acord, sense ajuda (com a molt 1 errada).</li>
-        <li><b>La roda amb cartes</b>: dues cartes amb música, sense ajuda al teclat (75%).</li>
+        <li><b>Ritme</b>: tocar el Do seguint dues cartes (un silenci i una nota llarga) amb música, quatre compassos (75% de compassos nets). Si no surt: <i>Llegeix les cartes</i>.</li>
+        <li><b>Acords</b>: construir Do, Sol, La m i Fa sense ajuda, un darrere l'altre; abans de cada un el joc s'atura i diu quin toca; una relliscada no fa perdre l'acord (3 de 4). Si no surt: <i>Aprèn la roda</i>.</li>
+        <li><b>Canvis</b>: la roda Do–Sol–La m–Fa–Do acord per acord, sense ajuda (com a molt 1 errada). Si no surt: els canvis de la roda.</li>
+        <li><b>La roda amb cartes</b>: dues cartes amb música, sense ajuda al teclat (75%). Si no surt: <i>La roda amb ritme</i>.</li>
+        <li><b>Cartes difícils</b>: dues cartes amb contratemps i silencis a mig compàs sobre la roda (75%). Si no surt: <i>Cançons i estructura</i>.</li>
+        <li><b>Temps partits</b>: dues cartes amb rodones partides sobre la roda (75%). Si no surt: <i>Temps partits</i>; si surt tot: <i>Inversions</i>.</li>
       </ol>
       <p>La prova es fa amb una mà. El resultat surt a la zona del professorat.</p>`,
   },
@@ -67,7 +69,7 @@ const SECTIONS = [
         <li><b>Inversions</b>: moure menys la mà entre acords.</li>
       </ol>
       <h4>🎯 Prova de nivell</h4>
-      <p>Quatre proves curtes (ritme, acords, canvis i la roda amb cartes) que porten qui juga al punt que li toca. Va tota sola: cada prova comença sola i, quan acaba, passa a la següent. A la barra hi ha <b>↩ Prova anterior</b>, <b>⏭ Salta la prova</b> i <b>▶ Comença aquí</b> (atura la prova i comença a jugar en aquest punt).</p>
+      <p>Sis proves curtes (ritme, acords, canvis, la roda amb cartes, cartes difícils i temps partits) que porten qui juga al punt que li toca. Va tota sola: cada prova comença sola i, quan acaba, passa a la següent. Si una no surt, es pot repetir un cop o continuar igualment: el nivell es decideix amb totes les proves, no amb la primera que falla. A la barra hi ha <b>↩ Prova anterior</b>, <b>⏭ Salta la prova</b> i <b>▶ Comença aquí</b> (atura la prova i comença a jugar en aquest punt).</p>
 
       <h4>Cartes difícils: les mans alternades</h4>
       <p>Les cartes amb el pols partit en quatre només es fan servir <b>amb dues mans</b>: amb una sola mà són massa subdivisió i acaben tensant el braç. Aquestes cartes es dibuixen en <b>una sola fila</b> amb els colors intercalats: cada tros <b style="color:#3fb2f5">blau</b> el toca la dreta i cada tros <b style="color:#ff8a2a">taronja</b>, l'esquerra, una darrere l'altra dins del mateix temps (com el patró de merengue). Amb una sola mà, el camí intel·ligent s'atura a les cartes intermèdies.</p>
@@ -341,6 +343,7 @@ const SECTIONS = [
         <li><b>Noms de les notes</b> a les tecles.</li>
         <li><b>Obre totes les missions a tots els alumnes</b>.</li>
         <li><b>Números de dit a les tecles pintades</b>: apagat per defecte (els números es poden confondre amb els graus). Si s'encén, surt una <b>taula de digitacions</b> amb tots els acords del joc: cada acord es pot deixar en automàtic (el número gris) o escriure-hi la digitació que vulgueu, de la nota més greu a la més aguda i per a la <b>mà dreta</b> (per exemple Si♭ = 1-2-4); l'esquerra la fa a l'inrevés.</li>
+        <li><b>🎹 El meu teclat</b>: perquè el teclat de la pantalla sigui idèntic al físic, com en una app de piano. Tria la mida (25, 32, 37, 49, 61, 76 o 88 tecles) o prem <b>Detecta'l tocant</b>: toca la tecla més greu i després la més aguda, i el joc en pren nota. Es desa al navegador (és una cosa de l'ordinador, no de l'alumne). «Automàtic» torna a ensenyar les tecles que caben a la pantalla. Amb teclats petits, les tecles pintades que quedin fora no es veuen, però les notes compten igual en qualsevol octava.</li>
         <li><b>Camí intel·ligent</b>: què sap cada persona, què ha de practicar i quants reptes ha fet.</li>
         <li><b>Progrés</b> de cada camí (una taula per camí): estrelles, barra per món, intents, últim dia, missions que costen (3 intents o més amb 1 estrella o menys), què diuen a l'autoavaluació i el resultat de la prova de nivell. Clicant un alumne es veuen els seus últims 20 intents. Es pot canviar el nom, esborrar-lo i <b>descarregar un CSV</b>.</li>
       </ul>

@@ -97,6 +97,7 @@ export function createKeyboard(canvas, { onKeyDown, onKeyUp, range = null, compa
   canvas.before(base, stripBox);
 
   let orientation = 'horizontal';
+  let rangeExact = false;
   let whites = [];
   let low = 0;
   let high = 0;
@@ -124,7 +125,8 @@ export function createKeyboard(canvas, { onKeyDown, onKeyUp, range = null, compa
     const height = canvas.clientHeight;
     const vertical = orientation === 'vertical';
     const along = vertical ? height : width;
-    if (range) setRange(...(width >= 560 || vertical || range[0] < 48 ? range : [Math.max(range[0], 53), range[1]]));
+    if (range && rangeExact) setRange(...range); // the student's own keyboard: every key, always
+    else if (range) setRange(...(width >= 560 || vertical || range[0] < 48 ? range : [Math.max(range[0], 53), range[1]]));
     else if (vertical) setRange(...(height >= 640 ? [43, 91] : height >= 420 ? [48, 84] : [53, 81]));
     else setRange(...(width >= 1000 ? [LOWEST, HIGHEST] : width >= 600 ? [48, 84] : [53, 84]));
 
@@ -591,9 +593,13 @@ export function createKeyboard(canvas, { onKeyDown, onKeyUp, range = null, compa
     setOrientation(value) {
       orientation = value;
     },
-    /** Changes the keys shown ([low, high] MIDI notes), e.g. more keys for two hands. */
-    setKeyRange(value) {
+    /**
+     * Changes the keys shown ([low, high] MIDI notes), e.g. more keys for two
+     * hands. `exact`: show those keys whatever the screen (the student's own keyboard).
+     */
+    setKeyRange(value, exact = false) {
       range = value;
+      rangeExact = exact;
     },
   };
 }

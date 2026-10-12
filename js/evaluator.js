@@ -165,9 +165,12 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
   function rhythmicNoteOn(note, ticks) {
     const name = noteName(note);
     const bar = barAt(ticks);
+    // The example bars are never candidates: a note played while the piano
+    // demonstrates is not judged, but if it is the entrance to the first real
+    // bar played a little early, it has to reach that bar (see below).
     const candidates = [bar - 1, bar, bar + 1]
       .map(barModel)
-      .filter(Boolean)
+      .filter((model) => model && !model.demo)
       .flatMap((model) => model.onsets.map((onset) => ({ model, onset })))
       .sort((a, b) => Math.abs(a.onset.tick - ticks) - Math.abs(b.onset.tick - ticks));
     let open = candidates.find(({ onset }) => onset.status === 'pending' && accepts(onset, ticks));
@@ -185,7 +188,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       // the chord that is coming instead of being read as a doubling of the one
       // before (Do → La m share the Do, and the Do was being eaten).
       const pc0 = pitchClass(note);
-      const here = candidates[0]?.model.chord.symbol;
+      const here = barModel(bar)?.chord.symbol ?? candidates[0]?.model.chord.symbol;
       open = candidates.find(({ model, onset }) => onset.status === 'pending'
         && onset.tick > ticks && onset.tick - ticks <= earlyGrace
         && model.chord.symbol !== here
@@ -203,8 +206,8 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
         } else {
           report('miss', model, `${name} de més al ${beatLabel(onset)}`, { kind: 'extra', tick: ticks, note });
         }
-      } else if (bar < 0 || !nearest) {
-        console.log(`${tag} (count-in) ignoring ${name}`);
+      } else if (bar < 0 || !nearest || isDemo(bar)) {
+        console.log(`${tag} (count-in or example) ignoring ${name}`);
       } else {
         const { model, onset } = nearest;
         report('miss', model, `${name} fora del ritme de la carta (${signed(ticksToMs(ticks - onset.tick))} del ${beatLabel(onset)})`, {
@@ -352,6 +355,22 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       const model = barModel(b);
       if (!model || model.demo || !model.onsets) continue;
       if (model.onsets.some((onset) => onset.status === 'pending' && accepts(onset, ticks))) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Is the first real attack about to arrive (within the early grace)? While
+   * the example plays, a note then counts as the entrance instead of being
+   * brushed off as "played during the example".
+   */
+  function entersSoon(timeStamp) {
+    const { ticks } = transport.positionAt(timeStamp);
+    const bar = barAt(ticks);
+    for (const b of [bar, bar + 1]) {
+      const model = barModel(b);
+      if (!model || model.demo || !model.onsets) continue;
+      return model.onsets.some((o) => o.status === 'pending' && o.tick - ticks <= earlyGrace && ticks >= o.tick - o.window - earlyGrace);
     }
     return false;
   }
@@ -529,5 +548,5 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     return level === 1 ? [model.chord.root] : level === 3 ? model.chord.tones : model.chord.triad;
   }
 
-  return { noteOn, noteOff, update, describeBar, markersForBar, guideForBar, allowedPitchClasses, expectsNow, setDemo, isDemo, forgetFrom };
+  return { noteOn, noteOff, update, describeBar, markersForBar, guideForBar, allowedPitchClasses, expectsNow, entersSoon, setDemo, isDemo, forgetFrom };
 }

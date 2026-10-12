@@ -3341,3 +3341,33 @@ button.play-hands-chip b {
     flex-wrap: wrap;
   }
 }
+
+/* ---- The student's own keyboard ------------------------------------------------------------------- */
+
+.play-keyboard-own {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+
+.play-keyboard-own h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.play-keysizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.play-note.bad {
+  color: var(--play-red);
+  font-weight: 700;
+}
+
+.play-note.good {
+  color: var(--play-green);
+  font-weight: 700;
+}
