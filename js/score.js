@@ -184,6 +184,10 @@ export function createScore(container) {
 
   function setCurrent(index) {
     const current = tiles[index];
+    // While the music runs, the cards already played fade out and the eye stays
+    // on the one that sounds and the ones to come (pre-reading); at the end
+    // (index -1) they all light up again so the marks can be read.
+    container.classList.toggle('playing', index >= 0);
     for (const tile of new Set(tiles)) tile?.node.classList.toggle('now', tile === current);
     const tile = tiles[index];
     if (tile) {

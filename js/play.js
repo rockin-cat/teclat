@@ -1951,7 +1951,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     if (keysManual !== null) return keysManual;
     return helpMode === 'shape' || bandStep() < 3;
   };
-  const compactCards = () => keysManual !== true && bandStep() >= 4;
+  // One card for the whole wheel was tried (band level 4) and it did not read
+  // well: the four cards stay, and the ones already played fade instead.
+  const compactCards = () => false;
   const showKeyboard = (on) => {
     piano.hidden = !on;
     missionScreen.classList.toggle('no-keys', !on);
@@ -2047,9 +2049,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       ? ' <i>Ara el teclat de la pantalla es fa més petit: mira més les cartes.</i>'
       : level === 3
         ? ' <i>A partir d\'ara el teclat de la pantalla s\'amaga quan no et pinta tecles (amb 🎹 el pots recuperar).</i>'
-        : level === 4
-          ? ' <i>I si tota la roda va amb la mateixa carta, en veuràs només una.</i>'
-          : '';
+        : '';
     return `<b>Nivell de banda ${level}: ${BAND_LEVELS[level].title}.</b> ${BAND_LEVELS[level].can}${keys}`;
   }
 
