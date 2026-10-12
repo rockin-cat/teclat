@@ -3430,3 +3430,52 @@ button.play-hands-chip b {
   background: var(--play-ink);
   border-radius: 50%;
 }
+
+/* ---- Contour cards: arrows drawn by the game -------------------------------------------------------- */
+
+.score-contour {
+  position: absolute;
+  inset: 0;
+  background: #f4f1ea;
+}
+
+.score-arrow {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.4em;
+  font-weight: 700;
+  line-height: 1;
+  color: #1d1d1f;
+  transform: translateY(-50%);
+  font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', 'DejaVu Sans', system-ui, sans-serif;
+}
+
+.score-arrow.a-start {
+  color: #1b8ad8;
+}
+
+.score-arrow.a-rest {
+  color: #9a948a;
+}
+
+.score-arrow.a-up2,
+.score-arrow.a-down2 {
+  color: #c2421b;
+}
+
+.play-cardpick-contour {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #1d1d1f;
+  background: #f4f1ea;
+  border-radius: 8px;
+}

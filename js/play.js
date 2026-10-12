@@ -32,6 +32,7 @@ import { renderGuide, renderGuidePrint } from './guide.js';
 import { STAGE_NAMES, applyOutcome, emptyState, known, levelOf, nextStep, progressOf, skillsFor, weak } from './adaptive.js';
 import { CHALLENGES, GUIDES, MODES, callPhrase, closeStats, countNote, emptyStats, guideNotes, readStats } from './improvise.js';
 import { LEVEL_COLOURS, errorText, listLibrary, loadLibrarySong, saveCode, savedCode, specFromLibrary } from './library.js';
+import { contourCard, contourLabel, contourLegend, isContourName } from './contour.js';
 
 const STORAGE_KEY = 'rockin.play.v1';
 const PATHS_KEY = 'rockin.play.paths';
@@ -555,6 +556,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     for (const n of contourNotes(chord, card.contour)) marks.set(n, { fill: true, colour, text: '' });
     return marks;
   };
+  /** Keys to paint on a contour bar: the hint says which (chord tones, or the one the arrow asks for). */
+  const contourMarks = (hint, colour = SHAPE) => {
+    const marks = new Map();
+    if (!hint) return marks;
+    const single = hint.notes.length === 1;
+    for (const n of hint.notes) marks.set(n, { fill: single, colour, text: single ? hint.symbol === 'same' ? '→' : hint.symbol === 'up' ? '↑' : hint.symbol === 'down' ? '↓' : hint.symbol === 'up2' ? '⇈' : hint.symbol === 'down2' ? '⇊' : '' : '' });
+    return marks;
+  };
   const leftMode = (m = mission) => m?.left ?? m?.world?.left ?? 'chord';
 
   const keysText = (notes) => {
@@ -568,7 +577,12 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const d = degreeOf(symbol, path?.key ?? 'C');
     return { colour: d.colour, ink: d.ink, degree: d.label };
   };
+  const contourCache = new Map();
   const cardByName = (filename) => {
+    if (isContourName(filename)) {
+      if (!contourCache.has(filename)) contourCache.set(filename, contourCard(filename.slice(8)));
+      return contourCache.get(filename);
+    }
     if (filename?.startsWith('2x:')) return derivedCard(getCards().find((c) => c.filename === filename.slice(3)));
     return getCards().find((c) => c.filename === filename) ?? twoHandCards().find((c) => c.filename === filename);
   };
@@ -582,7 +596,40 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     scoreBox.hidden = !on;
     scoreLegend.hidden = !legend;
     if (!on) scoreState = null;
+    fitScore();
   };
+
+  // The cards get the room that is really left on the screen, measured: the
+  // window minus the top bar, the panel (which grows and shrinks with its
+  // text), the legend and the keyboard. A long explanation can then never push
+  // the keyboard off the bottom, in full screen or not.
+  let fitTimer = null;
+  function fitScore() {
+    if (missionScreen.hidden || scoreBox.hidden) return;
+    const others = [...missionScreen.children].filter((n) => n !== scoreBox && !n.hidden);
+    const used = others.reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
+    const style = getComputedStyle(missionScreen);
+    const gap = parseFloat(style.rowGap || style.gap) || 0;
+    const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const top = Math.max(0, missionScreen.getBoundingClientRect().top + window.scrollY);
+    let room = window.innerHeight - top - used - gap * (others.length + 1) - padding - 30;
+    scoreBox.style.setProperty('--score-h', `${Math.max(150, Math.round(room))}px`);
+    // Second pass: whatever the cards' own padding and labels add, take it off,
+    // so the last thing on the screen (the keyboard) ends inside the window.
+    const last = others.at(-1) ?? scoreBox;
+    const over = last.getBoundingClientRect().bottom + (parseFloat(style.paddingBottom) || 0) - window.innerHeight;
+    if (over > 0) {
+      room -= over + 2;
+      scoreBox.style.setProperty('--score-h', `${Math.max(150, Math.round(room))}px`);
+    }
+  }
+  const fitSoon = () => {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitScore, 30);
+  };
+  window.addEventListener('resize', fitSoon);
+  document.addEventListener('fullscreenchange', fitSoon);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitSoon).observe(panel);
 
   /** A card with one long note for the meter of `world` (for the step-by-step missions). */
   function longCard(world) {
@@ -2262,14 +2309,15 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         button(last ? 'Entesos! ✓' : 'Següent →', next),
       ];
       const kicker = `Lliçó · ${i + 1} de ${slides.length}`;
-      const panel = () => {
-        setPanel({ kicker, title: slide.title, text: slide.text, buttons: buttons(false) });
-        step = { space: next, escape: next };
+      // The same panel whether it sounds or not (only the kicker and the buttons
+      // change), so nothing moves or gets cut while the card plays.
+      const panel = (playing = false) => {
+        setPanel({ kicker: playing ? `${kicker} · 🔊 sona la carta: mira la pilota` : kicker, title: slide.title, text: slide.text, tone: playing ? 'listen' : '', buttons: buttons(playing) });
+        step = playing ? { space: next, escape: () => { stopSession(); panel(); } } : { space: next, escape: next };
       };
       const listen = () => {
         const two = Boolean(world.twoHands);
-        setStatus({ kicker: `${kicker} · escolta i mira la pilota`, text: `<b>${slide.title}.</b> ${slide.text}`, tone: 'listen', buttons: buttons(true) });
-        step = { space: next, escape: () => { stopSession(); panel(); } };
+        panel(true);
         runMusic({
           bars: [{ card, chord: rootChord, kind: 'demo', name: '' }, { card, chord: rootChord, kind: 'demo', name: '' }],
           rows: [{ bars: [0, 1] }],
@@ -3247,8 +3295,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     .map((c) => c.filename);
   const MELODIC = {
     // From two different notes (arpeggios) to three and four (contour).
-    arp: [9, 7, 26, 10, 27, 20].map((n) => `melodic_${String(n).padStart(2, '0')}.png`),
-    contour: [5, 6, 21, 23, 22, 13, 14, 17, 15, 18].map((n) => `melodic_${String(n).padStart(2, '0')}.png`),
+    arp: [9, 7, 26, 10, 27, 20, 5, 6, 21, 14, 17].map((n) => `melodic_${String(n).padStart(2, '0')}.png`),
+    // Contour: arrow cards read with the scale (contour.js), from two notes to jumps.
+    contour: ['●↑●↑', '●↑↓→', '●↑↓↑', '●↓↑↓', '●↑↑○', '●↑↑↓', '●↓↓↑', '●⇈⇊⇈', '●⇈↓↓', '●↓⇈↓'].map((code) => `contour:${code}`),
   };
   // The hardest cards (the pulse split in four) only make sense between the two
   // hands: with one hand they are more subdivision than music. So with one hand
@@ -3367,6 +3416,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       ? { ...base, type: 'mix', title, cards: rotate(c[tier], 3) }
       : { ...base, type: 'pattern', title, card: rotate(c[tier], 1)[0], help: 'shape' });
     const melodicWorld = { ...world, level: 3, twoHands: false, left: undefined, style: 'ballad' };
+    const contourWorld = { ...melodicWorld, level: 5 };
     const read = { ...world, level: 1, left: 'bass', progression: kit.wheel[0], chords: [kit.wheel[0]], goal: 'Llegir una carta i tocar quan toca' };
     return {
       notes: { ...base, type: 'find', title: 'Troba les notes de la roda', pcs, rounds: probe ? 6 : 8, names: false },
@@ -3383,8 +3433,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         ? { ...base, world: melodicWorld, type: 'mix', title: 'Arpegis', cards: rotate(c.melodic.arp, 3) }
         : { ...base, world: melodicWorld, type: 'pattern', title: 'Arpegis', card: rotate(c.melodic.arp, 1)[0], help: 'shape' },
       contour: probe
-        ? { ...base, world: melodicWorld, type: 'mix', title: 'Girs melòdics', cards: rotate(c.melodic.contour, 3) }
-        : { ...base, world: melodicWorld, type: 'pattern', title: 'Girs melòdics', card: rotate(c.melodic.contour, 1)[0], help: 'shape' },
+        ? { ...base, world: contourWorld, type: 'mix', title: 'Girs melòdics', cards: rotate(c.melodic.contour, 3) }
+        : { ...base, world: contourWorld, type: 'pattern', title: 'Girs melòdics', card: rotate(c.melodic.contour, 1)[0], help: 'shape' },
     }[skill.id];
   }
 
@@ -4438,7 +4488,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const wheel = progression.map(chordName).join(' – ');
     const rootName = SOLFEGE[parseChord(progression[0]).root];
 
-    const what = level === 3
+    const what = level === 5
+      ? `Una nota a cada temps, seguint les <b>fletxes</b> amb l'<b>escala</b> de ${chordLong(path.key ?? 'C')}: <b>●</b> comença en una nota de l'acord (la que vulguis), <b>↑</b> la nota següent de l'escala, <b>↓</b> l'anterior, <b>→</b> la mateixa, <b>⇈ ⇊</b> salta'n una. La pilota bota amb el pols.`
+      : level === 3
       ? `Toca les notes de l'acord <b>d'una en una</b>, seguint la línia de la carta: si puja, una nota més aguda; si baixa, més greu. <b>Pots començar per qualsevol nota de l'acord</b>: el que compta és cap on va la línia. La pilota bota amb el pols.`
       : two && level === 1
       ? `Toca el <b>${rootName}</b> amb les dues mans: la <b style="color:${RIGHT_COLOUR}">dreta</b> segueix la fila blava i l'<b style="color:${LEFT_COLOUR}">esquerra</b>, més greu, la taronja.`
@@ -4489,7 +4541,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       // Two hands: the first chord is always painted on the start screen, as a
       // reference for which octave each hand goes to (during the try it is only
       // painted when the mission gives help).
-      view = { marks: help !== 'shape' && !two ? new Map() : two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : shapeMarks(voicings[0]), message: '' };
+      view = { marks: help !== 'shape' && !two ? new Map() : two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : level === 5 ? contourMarks({ notes: rootVoicing(playBars[0].chord), symbol: 'start' }) : shapeMarks(voicings[0]), message: '' };
       const drop = tempoDrop.get(mission.id) ?? 0;
       const tried = me()?.log.some((e) => e.m === mission.id && e.p === path.id);
       const boosted = helpFor() === 'shape' && help !== 'shape';
@@ -4498,7 +4550,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       // One step before it goes away (band level 2), the keyboard gets smaller.
       missionScreen.classList.toggle('small-keys', keysManual === null && bandStep() === 2 && helpFor() !== 'shape');
       hudRefresh();
-      if (boosted) view = { marks: two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : shapeMarks(voicings[0]), message: '' };
+      if (boosted) view = { marks: two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : level === 5 ? contourMarks({ notes: rootVoicing(playBars[0].chord), symbol: 'start' }) : shapeMarks(voicings[0]), message: '' };
       startPanel({
         kicker: TYPE_LABEL[type],
         title: mission.title,
@@ -4676,11 +4728,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     return el('div', { className: 'play-cardstrip' }, [
       el('small', { textContent: '🃏 Estudia una carta a part:' }),
       el('div', { className: 'play-cardstrip-row' }, cards.map((card) => {
-        const img = el('img', { alt: cardLabel(card), decoding: 'async', src: card.src });
-        img.onerror = () => {
+        const img = card.type === 'contour'
+          ? el('span', { className: 'play-cardpick-contour', textContent: contourLabel(card) })
+          : el('img', { alt: cardLabel(card), decoding: 'async', src: card.src });
+        if (card.type !== 'contour') img.onerror = () => {
           if (card.fullSrc && img.getAttribute('src') !== card.fullSrc) img.src = card.fullSrc;
         };
-        const b = el('button', { type: 'button', className: 'play-cardpick', title: `Practica ${cardLabel(card)} tantes vegades com vulguis` }, [img]);
+        const b = el('button', { type: 'button', className: 'play-cardpick', title: `Practica ${card.type === 'contour' ? contourLabel(card) : cardLabel(card)} tantes vegades com vulguis` }, [img]);
         b.addEventListener('click', () => openMission({
           id: `study:${world.id}:${card.filename}`,
           world,
@@ -4697,6 +4751,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   }
 
   function cardLegend(cards) {
+    if (cards.some((c) => c.type === 'contour')) return [contourLegend(cards.filter((c) => c.type === 'contour'))];
     const rows = cards.flatMap((c) => (c.twoHands ? [c.hands.right, c.hands.left] : c.pattern ? [c] : []));
     if (cards.some((c) => c.type === 'melodic')) {
       return [
@@ -4802,7 +4857,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         spread: 'juntes!',
         rest: 'aixeca',
         short: 'mantén!',
-        contour: `${name} ↕`,
+        contour: r.text ? r.text : `${name} ↕`,
       }[r.kind] ?? '';
       addMark(r.bar, { f: r.fraction, kind: r.kind, label, hand, index: r.index });
     };
@@ -4810,8 +4865,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     if (hands) {
       // One judge per hand, each with its row of the card; notes below middle C are the left hand.
       const handDeck = (hand) => ({ cardForBar: (b) => handCard(deck.cardForBar(b), hand) });
-      const right = createEvaluator({ level: level === 1 ? 1 : 2, transport, deck: handDeck('right'), onResult: onResult('right') });
-      const left = createEvaluator({ level: hands.left === 'bass' || level === 1 ? 1 : 2, transport, deck: handDeck('left'), onResult: onResult('left') });
+      const right = createEvaluator({ level: level === 1 ? 1 : 2, transport, deck: handDeck('right'), onResult: onResult('right'), key: path.key });
+      const left = createEvaluator({ level: hands.left === 'bass' || level === 1 ? 1 : 2, transport, deck: handDeck('left'), onResult: onResult('left'), key: path.key });
       // Which hand a note belongs to: middle C splits the keyboard, but a note clearly
       // nearer the other hand's chord counts for that hand, so choosing a different
       // octave doesn't make a note "missing".
@@ -4870,16 +4925,16 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         },
       };
     } else {
-      evaluator = createEvaluator({ level, transport, deck, onResult: onResult(null) });
+      evaluator = createEvaluator({ level, transport, deck, onResult: onResult(null), key: path.key });
     }
-    for (const card of new Set(bars.map((b) => b.card).filter(Boolean))) new Image().src = card.src;
+    for (const card of new Set(bars.map((b) => b.card).filter((c) => c?.src))) new Image().src = card.src;
     bars.forEach((bar, b) => {
       if (bar.kind === 'play') return;
       evaluator.setDemo(b, b + 1);
       if (bar.kind === 'demo') {
         for (const item of evaluator.guideForBar(b)) {
           const seconds = ((item.endTick - item.startTick) / transport.ticksPerSecond) * 0.92;
-          const notes = hands || level === 3 ? item.notes : voice(b);
+          const notes = hands || level === 3 || level === 5 ? item.notes : voice(b);
           transport.scheduleAt(item.startTick, (time) => backing.playDemo(notes, seconds, time));
         }
       }
@@ -4972,11 +5027,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           ? handMarks(voice(targetBar), voiceL(targetBar), { next: changing, symbol: bars[targetBar].chord })
           : level === 3
             ? melodicMarks(bars[targetBar].chord, bars[targetBar].card, changing ? SHAPE_NEXT : SHAPE)
-            : shapeMarks(voice(targetBar), changing ? SHAPE_NEXT : SHAPE);
+            : level === 5
+              ? contourMarks(evaluator.contourHint(targetBar), changing ? SHAPE_NEXT : SHAPE)
+              : shapeMarks(voice(targetBar), changing ? SHAPE_NEXT : SHAPE);
         for (const [n, m] of shape) marks.set(n, m);
       }
       const notes = kind === 'demo'
-        ? [index, index + 1].flatMap((k) => (k < bars.length && bars[k].kind === 'demo' ? evaluator.guideForBar(k).map((item) => (hands ? item : level === 3
+        ? [index, index + 1].flatMap((k) => (k < bars.length && bars[k].kind === 'demo' ? evaluator.guideForBar(k).map((item) => (hands || level === 5 ? item : level === 3
           // Melodic demo: the keys light up in the colour of the chord's degree, so the notes group by chord.
           ? { ...item, colour: colourOf(bars[k].chord).colour }
           : { ...item, notes: voice(k) })) : []))

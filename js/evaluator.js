@@ -4,12 +4,14 @@
 
 import { melodicSlots } from './cards.js';
 import { contourNotes, noteAtOrAbove, noteName, pitchClass, pitchClassName, triadNotes } from './theory.js';
+import { SYMBOLS, exampleNotes, expectedNotes, judgeStep, scaleOf, stepFrom } from './contour.js';
 
 export const LEVELS = {
   1: { name: 'Ritme + fonamental', cardType: 'rhythmic' },
   2: { name: 'Ritme + tríada', cardType: 'rhythmic' },
   3: { name: 'Contorn melòdic', cardType: 'melodic' },
   4: { name: 'Baix + acord (dues mans)', cardType: 'rhythmic' },
+  5: { name: 'Girs melòdics (contorn amb fletxes)', cardType: 'contour' },
 };
 
 const TIMING_WINDOW_MS = 180; // how early or late an attack may be and still count
@@ -37,7 +39,7 @@ const beatLabel = ({ beat, unit, units }) => (units > 1 ? `temps ${beat + 1} (${
 const relation = (rankDifference) =>
   rankDifference > 0 ? 'més aguda que' : rankDifference < 0 ? 'més greu que' : 'la mateixa nota que';
 
-export function createEvaluator({ level, transport, deck, onResult, inversions = false }) {
+export function createEvaluator({ level, transport, deck, onResult, inversions = false, key = 'C' }) {
   const tag = `[Eval L${level}]`;
   const msToTicks = (ms) => (ms / 1000) * transport.ticksPerSecond;
   const ticksToMs = (ticks) => Math.round((ticks / transport.ticksPerSecond) * 1000);
@@ -62,7 +64,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       const card = deck.cardForBar(bar);
       const startTick = transport.barStartTicks(bar);
       const model = { bar, card, chord: transport.chordForBar(bar), startTick, endTick: startTick + transport.barTicks, demo: demoBars.has(bar) };
-      Object.assign(model, card.type === 'melodic' ? melodicExpectations(model) : rhythmicExpectations(model));
+      Object.assign(model, card.type === 'melodic' ? melodicExpectations(model) : card.type === 'contour' ? contourExpectations(model) : rhythmicExpectations(model));
       bars.set(bar, model);
     }
     return bars.get(bar);
@@ -107,6 +109,23 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       onset.window = Math.max(msToTicks(60), Math.min(timingWindow, gap * 0.45));
     });
     return { onsets, rests };
+  }
+
+  // Contour cards: one arrow per beat, judged by the step it asks for from the
+  // note before, on the scale of the key. The steps share the rhythmic model's
+  // timing (one onset per beat) so the ball and the marks work the same.
+  function contourExpectations(model) {
+    const base = rhythmicExpectations(model);
+    const beatTicks = transport.barTicks / model.card.symbols.length;
+    const steps = model.card.symbols.map((symbol, index) => ({
+      index,
+      symbol,
+      tick: model.startTick + index * beatTicks,
+      endTick: model.startTick + (index + 1) * beatTicks,
+      status: symbol === 'rest' ? 'rest' : 'pending',
+      midi: null,
+    }));
+    return { ...base, steps };
   }
 
   // Melodic cards have no rhythm of their own: their points go on a steady grid (see melodicSlots).
@@ -379,7 +398,58 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     const { ticks } = transport.positionAt(timeStamp);
     held.set(note, ticks);
     if (level === 3) melodicNoteOn(note, ticks);
+    else if (level === 5) contourNoteOn(note, ticks);
     else rhythmicNoteOn(note, ticks);
+  }
+
+  // ---- Level 5: contour cards (arrows on the scale) -------------------------
+
+  /** The last correct note before step `index` of `model` (in this bar, or the bar before). */
+  function previousNote(model, index) {
+    for (let i = index - 1; i >= 0; i--) if (model.steps[i].status === 'hit' && model.steps[i].midi !== null) return model.steps[i].midi;
+    const before = bars.get(model.bar - 1);
+    if (before?.steps) for (let i = before.steps.length - 1; i >= 0; i--) if (before.steps[i].status === 'hit' && before.steps[i].midi !== null) return before.steps[i].midi;
+    return null;
+  }
+
+  function contourNoteOn(note, ticks) {
+    const name = noteName(note);
+    // A note just before the bar line is an early first note of the next bar.
+    const model = barModel(barAt(ticks + timingWindow));
+    if (!model || !model.steps || model.demo) {
+      console.log(`${tag} (count-in or example) ignoring ${name}`);
+      return;
+    }
+    const expected = model.steps.find((st) => st.status === 'pending');
+    if (!expected) {
+      report('miss', model, `${name} de més: la carta té ${model.steps.filter((st) => st.symbol !== 'rest').length} notes`, { kind: 'extra', tick: ticks, note });
+      return;
+    }
+    const at = { tick: Math.max(model.startTick, Math.min(model.endTick - 1, ticks)), note, index: expected.index };
+    const previous = previousNote(model, expected.index);
+    const verdict = judgeStep(expected.symbol, note, previous, model.chord.symbol, key);
+    expected.midi = note;
+    if (verdict.ok) {
+      expected.status = 'hit';
+      report('hit', model, `temps ${expected.index + 1}: ${name} (${expected.symbol}) ${signed(ticksToMs(ticks - expected.tick))}`, { kind: 'hit', offsetMs: ticksToMs(ticks - expected.tick), ...at });
+      return;
+    }
+    expected.status = 'miss';
+    report('miss', model, `temps ${expected.index + 1}: ${name} ${verdict.text}`, { kind: verdict.kind, text: verdict.text, ...at });
+  }
+
+  /**
+   * For the keyboard help on a contour bar: which keys to paint now (the
+   * chord's notes before the first note, then the one key the next arrow asks
+   * for), and the arrow's meaning.
+   */
+  function contourHint(bar) {
+    const model = barModel(bar);
+    if (!model?.steps) return null;
+    const expected = model.steps.find((st) => st.status === 'pending');
+    if (!expected) return null;
+    const previous = previousNote(model, expected.index);
+    return { ...expectedNotes(expected.symbol, previous, model.chord.symbol, key), symbol: expected.symbol, index: expected.index };
   }
 
   function noteOff({ note, timeStamp }) {
@@ -416,6 +486,16 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
         continue;
       }
 
+      if (model.steps) {
+        if (ticks > model.endTick + eventSlack) {
+          for (const st of model.steps) {
+            if (st.status !== 'pending') continue;
+            st.status = 'miss';
+            report('miss', model, `temps ${st.index + 1} (${st.symbol}) sense tocar`, { kind: 'missed', tick: st.tick, index: st.index });
+          }
+        }
+        continue;
+      }
       if (model.notes) {
         resolveHolds(model, ticks);
         const unplayed = model.notes.filter((n) => n.status === 'pending');
@@ -463,7 +543,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
   function markersForBar(bar) {
     const model = barModel(bar);
     if (!model) return [];
-    const items = model.onsets ?? model.notes;
+    const items = model.steps ? model.steps.filter((st) => st.symbol !== 'rest') : model.onsets ?? model.notes;
     return model.demo ? items.map(() => ({ status: 'pending' })) : items;
   }
 
@@ -493,6 +573,23 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     if (!model) return [];
     const { chord } = model;
     const status = (s) => (model.demo ? 'demo' : s);
+    if (model.steps) {
+      const example = exampleNotes(model.card, chord.symbol, key);
+      if (model.demo) {
+        return model.steps.filter((st) => st.symbol !== 'rest').map((st) => ({ startTick: st.tick, endTick: st.endTick, status: 'demo', notes: [example[st.index]] }));
+      }
+      // While playing: what was played where it was, and from there on what the
+      // arrows ask for, so the keys that light up follow the student's own start.
+      const scale = scaleOf(key);
+      const stepOf = (symbol) => Object.values(SYMBOLS).find((x) => x.id === symbol)?.step ?? 0;
+      let current = null;
+      return model.steps.filter((st) => st.symbol !== 'rest').map((st) => {
+        if (st.midi !== null) current = st.midi;
+        else if (st.symbol === 'start' || current === null) current = example[st.index];
+        else current = stepFrom(current, stepOf(st.symbol), scale) ?? current;
+        return { startTick: st.tick, endTick: st.endTick, status: status(st.status), notes: [current] };
+      });
+    }
     if (model.notes) {
       const suggested = contourNotes(chord, model.card.contour);
       const contour = model.card.contour;
@@ -558,5 +655,5 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     return level === 1 ? [model.chord.root] : level === 3 ? model.chord.tones : model.chord.triad;
   }
 
-  return { noteOn, noteOff, update, describeBar, markersForBar, guideForBar, allowedPitchClasses, expectsNow, entersSoon, setDemo, isDemo, forgetFrom };
+  return { noteOn, noteOff, update, describeBar, markersForBar, guideForBar, allowedPitchClasses, expectsNow, entersSoon, setDemo, isDemo, forgetFrom, contourHint };
 }

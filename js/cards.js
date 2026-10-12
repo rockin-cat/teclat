@@ -34,7 +34,7 @@ export function tierOf(card) {
 }
 
 export const cardLabel = (card) =>
-  `${card.type === 'melodic' ? 'Melòdica' : card.meter === 'binary' ? 'Binària' : 'Ternària'} ${card.number}`;
+  card.type === 'contour' ? `Contorn ${card.chars.join(' ')}` : `${card.type === 'melodic' ? 'Melòdica' : card.meter === 'binary' ? 'Binària' : 'Ternària'} ${card.number}`;
 
 // A rhythmic card is played one circle per felt pulse of the bar, so it fits a
 // meter with that many pulses whose pulse divides the same way: in 2 or 4 for

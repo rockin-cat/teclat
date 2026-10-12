@@ -27,6 +27,8 @@ import { playableCards, tierOf } from './cards.js';
 const card = (n) => `rhythm_binary_${String(n).padStart(2, '0')}.png`;
 const WHEEL = ['C', 'G', 'Am', 'F'];
 const mel = (n) => `melodic_${String(n).padStart(2, '0')}.png`;
+// Contour cards are drawn by the game from a code of arrows (see contour.js).
+const con = (code) => `contour:${code}`;
 
 /**
  * Level 2 (after the path): arpeggios and melodic contour, over `wheel`.
@@ -63,32 +65,33 @@ export function levelTwoWorlds({ wheel, idOf = (w, k) => `${w}-${k}`, worldId = 
     },
     {
       ...common,
+      level: 5,
       id: worldId('contorn'),
       title: 'Nivell 2 · Girs melòdics',
-      goal: 'Llegir els girs de la melodia: si puja, baixa o torna, amb dues, tres i quatre notes',
+      goal: 'Seguir les fletxes amb l\'escala: si la melodia puja, baixa o torna, amb dues, tres i quatre notes',
       missions: [
         {
           id: idOf('con', 'lliçó'),
           type: 'lesson',
-          title: 'Els girs de la melodia',
+          title: 'Les fletxes del contorn',
           slides: [
-            { card: mel(26), title: 'Un gir que puja', text: 'Un <b>gir</b> és el camí que fa la melodia d\'una nota a la següent. Aquí la línia només <b>puja</b>: dues notes, la segona més aguda. Les línies planes són notes <b>mantingudes</b>: fixa\'t que la primera dura més.' },
-            { card: mel(9), title: 'Puja i torna', text: 'Quan la línia puja i després <b>baixa</b>, la melodia <b>torna</b> a la nota d\'abans: puja – baixa – puja. Escolta com va i ve entre dues notes.' },
-            { card: mel(6), title: 'Tres notes seguides', text: 'Amb <b>tres</b> alçades, el gir passa per tres notes de l\'acord: aquí <b>amunt</b>, una darrere l\'altra.' },
-            { card: mel(20), title: 'Amb salts', text: 'La línia pot <b>saltar-se</b> una nota: de la més greu a la més aguda i tornar a la del mig. Mira quant puja cada tram.' },
+            { card: con('●↑●↑'), title: 'Comença i puja', text: 'Aquestes cartes són <b>fletxes</b>, una per temps, i es llegeixen amb l\'<b>escala</b>, no només amb l\'acord. <b>●</b> vol dir «comença en una nota de l\'acord» (la que vulguis). <b>↑</b> és la nota <b>següent de l\'escala</b>, cap amunt.' },
+            { card: con('●↑↓→'), title: 'Puja, baixa i queda\'t', text: '<b>↓</b> és la nota anterior de l\'escala: torna on eres. <b>→</b> és <b>la mateixa</b> nota una altra vegada. Escolta el gir: amunt, avall, i es queda.' },
+            { card: con('●↑↑○'), title: 'Tres notes seguides', text: 'Dues fletxes amunt seguides fan <b>tres notes de l\'escala</b>, una darrere l\'altra. <b>○</b> és un silenci: no toquis.' },
+            { card: con('●⇈⇊⇈'), title: 'Amb salts', text: 'La fletxa doble <b>⇈</b> es <b>salta una nota</b> de l\'escala (una tercera), i <b>⇊</b> la salta cap avall. Mira que el salt és més gran que un pas.' },
           ],
         },
-        { id: idOf('con', 1), type: 'pattern', title: 'Dues notes: només puja', card: mel(26), help: 'shape' },
-        { id: idOf('con', 2), type: 'pattern', title: 'Dues notes: només baixa', card: mel(27), help: 'shape' },
-        { id: idOf('con', 3), type: 'pattern', title: 'Dues notes: puja i torna', card: mel(9), help: 'none' },
-        { id: idOf('con', 4), type: 'pattern', title: 'Tres notes amunt', card: mel(6), help: 'shape' },
-        { id: idOf('con', 5), type: 'pattern', title: 'Tres notes avall', card: mel(5), help: 'shape' },
-        { id: idOf('con', 6), type: 'pattern', title: 'Tres notes que tornen', card: mel(21), help: 'none' },
-        { id: idOf('con', 7), type: 'pattern', title: 'Tres notes amb salts', card: mel(20), help: 'none' },
-        { id: idOf('con', 8), type: 'pattern', title: 'Quatre notes amunt', card: mel(14), help: 'shape' },
-        { id: idOf('con', 9), type: 'pattern', title: 'Quatre notes avall', card: mel(17), help: 'none' },
-        { id: idOf('con', 'repte'), type: 'mix', title: 'Objectiu: tres girs', cards: [mel(22), mel(13), mel(15)] },
-        { id: idOf('con', 'banda'), type: 'band', title: 'Toca amb la banda', cards: [mel(20), mel(14), mel(5), mel(17)] },
+        { id: idOf('con', 1), type: 'pattern', title: 'Dues notes: puja', card: con('●↑●↑'), help: 'shape' },
+        { id: idOf('con', 2), type: 'pattern', title: 'Dues notes: puja i baixa', card: con('●↑↓→'), help: 'shape' },
+        { id: idOf('con', 3), type: 'pattern', title: 'Dues notes: puja, baixa, puja', card: con('●↑↓↑'), help: 'none' },
+        { id: idOf('con', 4), type: 'pattern', title: 'Dues notes: baixa i torna', card: con('●↓↑↓'), help: 'none' },
+        { id: idOf('con', 5), type: 'pattern', title: 'Tres notes: puja', card: con('●↑↑○'), help: 'shape' },
+        { id: idOf('con', 6), type: 'pattern', title: 'Tres notes: puja i baixa', card: con('●↑↑↓'), help: 'shape' },
+        { id: idOf('con', 7), type: 'pattern', title: 'Tres notes: baixa i puja', card: con('●↓↓↑'), help: 'none' },
+        { id: idOf('con', 8), type: 'pattern', title: 'Tres notes amb salt', card: con('●⇈⇊⇈'), help: 'shape' },
+        { id: idOf('con', 9), type: 'pattern', title: 'Salt i pas', card: con('●⇈↓↓'), help: 'none' },
+        { id: idOf('con', 'repte'), type: 'mix', title: 'Objectiu: tres girs', cards: [con('●↑↓↑'), con('●↑↑↓'), con('●⇈↓↓')] },
+        { id: idOf('con', 'banda'), type: 'band', title: 'Toca amb la banda', cards: [con('●↑●↑'), con('●↓↓↑'), con('●⇈⇊⇈'), con('●↑↓→')] },
       ],
     },
   ];

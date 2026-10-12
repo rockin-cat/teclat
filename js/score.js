@@ -112,11 +112,22 @@ export function createScore(container) {
         const canvas = el('canvas', { className: 'score-canvas' });
         const cardBox = el('div', { className: 'score-card' });
         let cover = null;
+        let contourBox = null;
         if (bar.kind === 'ready') {
           cardBox.append(el('div', { className: 'score-ready' }, [
             el('b', { textContent: 'Ara tu!' }),
             el('span', { textContent: Array.from({ length: pulses }, (_, i) => i + 1).join(' ') }),
           ]));
+        } else if (bar.card?.type === 'contour') {
+          // A contour card is drawn by the game: one arrow per beat on a card-coloured box.
+          contourBox = el('div', { className: 'score-contour' }, bar.card.chars.map((ch, i) => {
+            const cell = bar.card.layout.cells[i];
+            const glyph = el('span', { className: `score-arrow a-${bar.card.symbols[i]}`, textContent: ch });
+            glyph.style.left = `${cell.x0 * 100}%`;
+            glyph.style.width = `${(cell.x1 - cell.x0) * 100}%`;
+            return glyph;
+          }));
+          cardBox.append(contourBox);
         } else if (bar.card) {
           const img = el('img', { alt: '', decoding: 'async', src: bar.card.src });
           img.onerror = () => {
@@ -150,7 +161,7 @@ export function createScore(container) {
         ]);
         grid.append(node);
         const headB = node.querySelector('b');
-        tiles[index] = { bar: index, node, headB, card: bar.kind === 'ready' ? null : bar.card, canvas, cover, rowNode, geometry: null, sizeKey: '', active: index, first: index };
+        tiles[index] = { bar: index, node, headB, card: bar.kind === 'ready' ? null : bar.card, canvas, cover, contourBox, rowNode, geometry: null, sizeKey: '', active: index, first: index };
         dirty.add(index);
       }
       rowsBox.append(rowNode);
@@ -336,6 +347,7 @@ export function createScore(container) {
     g.landings.push({ f: 1, x: last.x1 * w + (w - last.x1 * w) / 2, y: restY });
     g.anchors.push({ f: 1, x: last.x1 * w + (w - last.x1 * w) / 2 });
     g.hop = Math.max(4, Math.min(w * 0.1, restY - BALL_R - 1));
+    if (tile.contourBox) tile.contourBox.style.fontSize = `${Math.round(g.r * 2.4)}px`;
     tile.geometry = g;
     return g;
   }
