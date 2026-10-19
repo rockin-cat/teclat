@@ -3479,3 +3479,148 @@ button.play-hands-chip b {
   background: #f4f1ea;
   border-radius: 8px;
 }
+
+/* Level of achievement: «En procés», «A prop», «Ja ho tens!» (no stars). */
+.play-panel.near {
+  border-color: rgb(255 192 18 / 50%);
+}
+
+.play-panel.progress {
+  border-color: rgb(54 197 240 / 50%);
+}
+
+.play-result-level {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 17px;
+}
+
+.play-result-level .level-badge {
+  font-size: 22px;
+  padding: 6px 16px;
+}
+
+.play-result-block h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--play-muted);
+}
+
+.play-result-block + .play-result-block,
+.play-result-block + .play-reflect {
+  margin-top: 12px;
+}
+
+.play-panel .play-result-block li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.play-panel .play-result-block li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--play-muted);
+}
+
+.play-advice {
+  padding: 8px 12px;
+  border-left: 3px solid var(--play-cyan);
+  background: rgb(54 197 240 / 8%);
+  border-radius: 0 10px 10px 0;
+}
+
+.play-result-block .play-buttons {
+  margin-top: 6px;
+}
+
+.play-path-end {
+  margin: 12px 0;
+  padding: 14px 18px;
+  border: 1px solid rgb(61 220 132 / 55%);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgb(61 220 132 / 14%), var(--play-panel));
+}
+
+.play-path-end strong {
+  font-size: 19px;
+}
+
+.play-path-end p {
+  margin: 4px 0 0;
+}
+
+.play-band-level > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.play-band-level > summary::-webkit-details-marker {
+  display: none;
+}
+
+.play-band-level > summary::after {
+  content: 'Mostra-ho tot ▾';
+  font-size: 12px;
+  color: var(--play-muted);
+}
+
+.play-band-level[open] > summary::after {
+  content: 'Amaga ▴';
+}
+
+.play-level-list {
+  margin-top: 8px;
+}
+
+.welcome-art.levels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+body.play-theme .level-badge.l0 {
+  color: #b9e6ff;
+  background: rgb(54 197 240 / 16%);
+  border-color: rgb(54 197 240 / 45%);
+}
+
+body.play-theme .level-badge.l1 {
+  color: #ffe38a;
+  background: rgb(255 192 18 / 14%);
+  border-color: rgb(255 192 18 / 45%);
+}
+
+body.play-theme .level-badge.l2 {
+  color: #9ff0c4;
+  background: rgb(61 220 132 / 16%);
+  border-color: rgb(61 220 132 / 50%);
+}
+
+.teacher-level {
+  white-space: nowrap;
+}
+
+.teacher-level + .teacher-level {
+  margin-top: 3px;
+}
+
+.teacher-gap-where {
+  display: block;
+  color: var(--play-muted);
+}
+
+/* Result panels: the level on top, next to what was missing and what to do. */
+.play-panel.with-side {
+  align-items: flex-start;
+}

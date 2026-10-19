@@ -1543,3 +1543,43 @@ button.home-door.session {
   color: #1d1d1f;
   background: #ffc60a;
 }
+
+/* Level of achievement badge (shared by Sessió and Juga). */
+.level-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.level-badge.none {
+  display: none;
+}
+
+.level-badge.small {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.level-badge.l0 {
+  color: #205f7a;
+  background: #e1f3fb;
+  border-color: #b6e0f2;
+}
+
+.level-badge.l1 {
+  color: #7a5a00;
+  background: var(--accent-soft);
+  border-color: #f2d98a;
+}
+
+.level-badge.l2 {
+  color: #17663a;
+  background: #def5e7;
+  border-color: #aee3c3;
+}

@@ -1,10 +1,11 @@
 // Challenge mode: the cards of each level and meter form a path from easy to
 // hard. A card is passed after PASS_ROUNDS clean rounds of the progression in a
 // row. When every card of a tier is passed, a mixed-card exam unlocks, and
-// EXAM_PASS_STARS stars in it open the next tier. Progress lives in this
+// a score of EXAM_PASS_STARS («A prop») in it opens the next tier. Progress lives in this
 // browser's localStorage.
 
 import { TIERS, cardLabel, tierOf } from './cards.js';
+import { levelBadge, levelName } from './levels.js';
 
 export const PASS_ROUNDS = 2;
 
@@ -13,7 +14,7 @@ export const HELP = [
   { id: 'full', name: 'Notes que arriben', mark: '✓', hint: 'les notes baixen fins a la tecla i s\'il·lumina quan toca' },
   { id: 'cards', name: 'Cartes al piano roll (experimental)', mark: '✓', hint: 'la carta arriba pel carril, a l\'alçada de les tecles de l\'acord: millor amb el teclat en vertical' },
   { id: 'keys', name: 'Només les tecles', mark: '✓✓', hint: 'un punt marca les tecles de l\'acord, però el ritme el llegeixes a la carta' },
-  { id: 'none', name: 'Només la carta', mark: '★', hint: 'sense cap ajuda al teclat' },
+  { id: 'none', name: 'Només la carta', mark: '◆', hint: 'sense cap ajuda al teclat' },
 ];
 export const helpIndex = (id) => Math.max(0, HELP.findIndex((h) => h.id === id));
 export const EXAM_MIN_BARS = 8;
@@ -163,7 +164,8 @@ export const targetLabel = (target) => {
   return target.kind === 'exam' ? `Repte final ${tier.toLowerCase()}` : `${cardLabel(target.card)} · ${tier}`;
 };
 
-export const starText = (stars) => '★'.repeat(stars ?? 0) + '☆'.repeat(3 - (stars ?? 0));
+/** «En procés», «A prop» or «Ja ho tens!» for a 0–3 score (scores are kept as before). */
+export const starText = (stars) => levelName(stars);
 
 // ---- Rendering --------------------------------------------------------------
 
@@ -245,9 +247,9 @@ export function renderMap(container, map, selected, onSelect) {
         className: `card-chip exam${sameTarget(examTarget, selected) ? ' active' : ''}${(tier.stars ?? 0) >= EXAM_PASS_STARS ? ' passed' : ''}`,
         disabled: !tier.examUnlocked,
         title: tier.examUnlocked
-          ? `Repte final amb cartes barrejades i sense ajuda al teclat (calen ${EXAM_PASS_STARS} estrelles)`
+          ? 'Repte final amb cartes barrejades i sense ajuda al teclat (cal arribar a «A prop»: el 75% d\'encerts)'
           : 'Supera (o salta) totes les cartes per fer el repte final',
-      }, [el('span', { textContent: 'Repte final' }), el('span', { className: 'stars', textContent: starText(tier.stars) })]);
+      }, [el('span', { textContent: 'Repte final' }), levelBadge(tier.stars, { small: true })]);
       exam.addEventListener('click', () => onSelect(examTarget));
       return el('div', { className: `tier${tier.unlocked ? '' : ' locked'}` }, [header, el('div', { className: 'tier-cards' }, [...chips, exam])]);
     }),

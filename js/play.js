@@ -33,6 +33,7 @@ import { STAGE_NAMES, applyOutcome, emptyState, known, levelOf, nextStep, progre
 import { CHALLENGES, GUIDES, MODES, callPhrase, closeStats, countNote, emptyStats, guideNotes, readStats } from './improvise.js';
 import { LEVEL_COLOURS, errorText, listLibrary, loadLibrarySong, saveCode, savedCode, specFromLibrary } from './library.js';
 import { contourCard, contourLabel, contourLegend, isContourName } from './contour.js';
+import { LEVEL_NAMES, PATH_END_TEXT, isDone, levelBadge, levelOf as stepLevel } from './levels.js';
 
 const STORAGE_KEY = 'rockin.play.v1';
 const PATHS_KEY = 'rockin.play.paths';
@@ -48,7 +49,7 @@ const SHAPE_NEXT = '#ffb37a';
 const SHARED = '#7ee2a8';
 const COUNT = '#b9e6ff';
 const SPLIT = 60; // two hands: notes below middle C are the left hand
-const GLYPH = { arpeggio: '⤴', 'probe-chords': '🧱', 'probe-changes': '⇄', find: '🔍', jump: '↷', build: '🧱', rush: '⏱', lesson: '?', chord: '♫', change: '⇄', steps: '⋯', pattern: '♩', mix: '★', song: '♬', structure: '§', band: '♪♪', invert: '↻' };
+const GLYPH = { arpeggio: '⤴', 'probe-chords': '🧱', 'probe-changes': '⇄', find: '🔍', jump: '↷', build: '🧱', rush: '⏱', lesson: '?', chord: '♫', change: '⇄', steps: '⋯', pattern: '♩', mix: '◆', song: '♬', structure: '§', band: '♪♪', invert: '↻' };
 const TYPE_LABEL = {
   find: 'Troba la nota',
   jump: 'Salta tecles',
@@ -104,7 +105,6 @@ function chordChip(symbol, key, state = 'on', title = '') {
   return chip;
 }
 
-const starText = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 /** The key of a song spec: the one given or, without it, the first chord. */
 function keyOf(spec) {
   if (spec.key) return spec.key;
@@ -240,7 +240,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   const piano = el('div', { className: 'piano play-piano' }, [el('div', { className: 'piano-canvas' }, [pianoCanvas, animCanvas])]);
   // Always on screen while playing: which band level you are at, and what the
   // next one asks for (click it to see the whole ladder).
-  const levelPill = el('button', { type: 'button', className: 'play-level-pill', title: 'El teu nivell per tocar amb els companys' });
+  const levelPill = el('button', { type: 'button', className: 'play-level-pill', title: 'Què sé fer amb el meu grup' });
   const levelLadder = el('div', { className: 'play-level-ladder', hidden: true });
   const levelBox = el('div', { className: 'play-level-box' }, [levelPill, levelLadder]);
   levelPill.addEventListener('click', () => {
@@ -822,12 +822,31 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     if (path === WORKSHOP_PATH || store.unlockAll || isTeacher() || index <= startIndex()) return true;
     return starsOf(path.missions[index - 1].id) >= 1;
   };
+  // The next mission opens as soon as a try reaches the old pass mark (score 1),
+  // so the path is not harder than before; a mission only counts as done from
+  // «A prop» on, and what is still «En procés» comes back once the rest is passed.
+  const isMain = (m) => !m.world?.level2;
   const nextIndex = () => {
     const from = startIndex();
-    let i = path.missions.findIndex((m, k) => k >= from && unlocked(k) && starsOf(m.id) < 1);
-    if (i === -1) i = path.missions.findIndex((m, k) => unlocked(k) && starsOf(m.id) < 1);
+    const find = (test) => path.missions.findIndex((m, k) => unlocked(k) && test(m, k));
+    let i = find((m, k) => k >= from && isMain(m) && starsOf(m.id) < 1);
+    if (i === -1) i = find((m) => isMain(m) && starsOf(m.id) < 1);
+    if (i === -1 && path !== WORKSHOP_PATH) i = find((m) => isMain(m) && !isDone(starsOf(m.id)));
+    if (i === -1) i = find((m) => starsOf(m.id) < 1);
     return i === -1 ? null : i;
   };
+  /** The level of a mission, or undefined if it was never tried. */
+  const triedOf = (id) => me()?.stars[id];
+  /** The main path (without the optional «Nivell 2») at «A prop» or more. */
+  const pathFinished = (p = path) => {
+    const main = p.missions.filter(isMain);
+    return p !== WORKSHOP_PATH && main.length > 0 && main.every((m) => isDone(me()?.stars[m.id]));
+  };
+  /** The closing message of the path, for the map and «Què sé fer». */
+  const pathEndBox = () => el('div', { className: 'play-path-end' }, [
+    el('strong', { textContent: 'Has acabat el camí' }),
+    el('p', { textContent: PATH_END_TEXT.replace(/^Has acabat el camí\. /, '') }),
+  ]);
   /** Chords taught before mission `index` (or before the end of the path). */
   const learnedBefore = (index) => (path.twoHands
     ? new Set(splitProgression(path.worlds[0].progression))
@@ -862,14 +881,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   }
 
   const unlockButton = () => (isTeacher() ? null : button('🔓 Desbloqueja-ho tot (mode professor)', () => {
-    if (!window.confirm('Mode professor: tots els camins i missions oberts per provar-ho tot. Les estrelles no es guarden. Continuar?')) return;
+    if (!window.confirm('Mode professor: tots els camins i missions oberts per provar-ho tot. Els resultats no es guarden. Continuar?')) return;
     enterTeacherMode();
   }, 'ghost small'));
 
   function teacherBannerEl() {
     if (!isTeacher()) return null;
     return el('div', { className: 'play-teacher-banner' }, [
-      el('span', { innerHTML: '🔓 <b>Mode professor</b>: tot obert; les estrelles no es guarden.' }),
+      el('span', { innerHTML: '🔓 <b>Mode professor</b>: tot obert; els resultats no es guarden.' }),
       button('Surt del mode professor', () => {
         store.current = null;
         saveStore();
@@ -947,7 +966,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     });
     if (screen === 'map' && (section === 'cancons' ? songBoard === 'adapt' : board === 'adapt')) return showAdaptive(withHands(kitFor(path.base ?? path)));
     const st = me();
-    const total = path.missions.reduce((sum, m) => sum + starsOf(m.id), 0);
+    const tried = path.missions.some((m) => triedOf(m.id) !== undefined);
+    const finished = pathFinished();
     const resume = nextIndex();
     const next = resume !== null ? path.missions[resume] : null;
     const spec = allSpecs().find((x) => x.id === (path.base ?? path).id);
@@ -963,33 +983,33 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           path.custom ? el('div', { className: 'play-kicker', textContent: spec.book ? `Llibre ROCKIN · ${spec.name} (${spec.artist}) · ${styleName(spec.style)} ${spec.tempo} bpm` : `Cançó: ${path.title} · compàs ${spec.meter}` }) : null,
           workshop ? el('div', { className: 'play-kicker', textContent: 'Taller d\'acords · tria el joc que vulguis' }) : null,
           el('h2', { textContent: `Hola, ${st.name}!` }),
-          el('div', { className: 'play-total' }, [el('span', { textContent: '★' }), ` ${total} estrelles`]),
           workshop ? null : handsChip(),
         ]),
         next
           ? el('div', { className: 'play-resume' }, [
-              el('small', { textContent: total ? 'Continua per aquí:' : 'Comença per aquí:' }),
+              el('small', { textContent: next.world?.level2 && finished ? 'Per aprofundir (opcional):' : starsOf(next.id) >= 1 ? 'Encara en procés, torna-hi:' : tried ? 'Continua per aquí:' : 'Comença per aquí:' }),
               el('strong', { textContent: next.title }),
               button('▶ Juga', () => openMission(resume)),
             ])
-          : el('div', { className: 'play-resume' }, [el('strong', { textContent: 'Has completat tot el camí! 🎉' })]),
+          : el('div', { className: 'play-resume' }, [el('strong', { textContent: workshop ? 'Ho has fet tot.' : 'Has acabat el camí.' })]),
       ]),
+      finished ? pathEndBox() : null,
       workshop ? null : bandCard(),
       songs && spec ? songGrid(spec) : workshop ? null : keyStrip(path.key, splitProgression(ROCKIN_PATH.worlds[1].progression)),
       ...path.worlds.flatMap((world, w) => {
         const levelHead = world.level2 && !path.worlds[w - 1]?.level2
           ? el('div', { className: 'play-level-head' }, [
-              el('strong', { textContent: '⭐ Nivell 2: arpegis i girs melòdics' }),
+              el('strong', { textContent: 'Nivell 2, per aprofundir: arpegis i girs melòdics' }),
               el('span', { textContent: 'Les notes de l\'acord d\'una en una, seguint la línia de les cartes melòdiques. Es fa amb la mà dreta.' }),
             ])
           : null;
         const first = index;
         const count = world.missions.length;
         index += count;
-        const done = world.missions.every((m) => starsOf(m.id) >= 1);
+        const done = world.missions.every((m) => isDone(starsOf(m.id)));
+        const passed = world.missions.every((m) => starsOf(m.id) >= 1);
         const current = next?.world === world;
         const locked = !workshop && !store.unlockAll && !isTeacher() && !done && !current && !unlocked(first);
-        const worldStars = world.missions.reduce((sum, m) => sum + starsOf(m.id), 0);
         const learned = learnedBefore(first + count);
         const box = el('details', { className: `play-world${current ? ' current' : ''}${done ? ' done' : ''}${locked ? ' locked' : ''}`, open: workshop || current || ((store.unlockAll || isTeacher()) && !done) });
         box.append(
@@ -999,7 +1019,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
               el('h3', { textContent: world.title }),
               locked ? el('p', { textContent: 'Acaba el món anterior per obrir-lo.' }) : el('p', { textContent: world.goal }),
             ]),
-            el('span', { className: 'play-world-stars', textContent: `★ ${worldStars}/${count * 3}` }),
+            el('span', { className: 'play-world-stars', textContent: done ? 'Fet' : passed ? 'Per polir' : '' }),
           ]),
         );
         if (!locked) {
@@ -1012,16 +1032,16 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
             el('ol', { className: 'play-path' }, world.missions.map((m, k) => {
               const i = first + k;
               const open = unlocked(i);
-              const got = starsOf(m.id);
+              const got = triedOf(m.id);
               const node = el('button', {
                 type: 'button',
-                className: `play-node ${m.type}${got ? ' done' : ''}${i === resume ? ' next' : ''}`,
+                className: `play-node ${m.type}${isDone(got) ? ' done' : ''}${i === resume ? ' next' : ''}`,
                 disabled: !open,
-                title: open ? m.title : 'Aconsegueix almenys una estrella a la missió anterior',
+                title: open ? m.title : 'Fes la missió anterior per obrir-la',
               }, [
                 el('span', { className: 'play-node-dot', textContent: open ? GLYPH[m.type] : '·' }),
                 el('span', { className: 'play-node-title', textContent: m.title }),
-                el('span', { className: 'play-node-stars', textContent: open ? starText(got) : '' }),
+                el('span', { className: 'play-node-stars' }, [open ? levelBadge(got, { small: true }) : null]),
               ]);
               node.addEventListener('click', () => openMission(i));
               return el('li', {}, [node]);
@@ -1216,7 +1236,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         const song = await loadLibrarySong(code, entry.id);
         const spec = specFromLibrary(song, entry);
         buildPath(spec, getCards()); // validates: the game has to be able to play it
-        // Opening it again refreshes the path; the stars stay, because the ids are the same.
+        // Opening it again refreshes the path; the results stay, because the ids are the same.
         customSpecs = [...customSpecs.filter((x) => x.id !== spec.id), spec];
         save(PATHS_KEY, customSpecs);
         openSongPath(spec.id);
@@ -1328,40 +1348,34 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       });
       return b;
     };
-    const starsIn = (spec) => {
+    // How far the student is in a song path, in words (no counters).
+    const progressIn = (spec) => {
       try {
         const p = buildPath(spec, getCards());
-        return { stars: p.missions.reduce((sum, m) => sum + starsOf(m.id), 0), total: p.missions.length * 3 };
+        if (pathFinished(p)) return ' · camí acabat';
+        return p.missions.some((m) => triedOf(m.id) !== undefined) ? ' · en marxa' : '';
       } catch {
-        return { stars: 0, total: 0 };
+        return '';
       }
     };
     const bookCards = bookSpecs.map((spec) => {
-      const { stars, total } = starsIn(spec);
+      const progress = progressIn(spec);
       const card = el('button', { type: 'button', className: 'play-song book' }, [
         el('span', { className: 'play-song-icon', textContent: '📖' }),
         el('strong', { textContent: spec.name }),
         el('small', { className: 'play-song-artist', textContent: spec.artist }),
         el('div', { className: 'play-goal-chords' }, splitProgression(spec.progression).map((c) => chordChip(c, spec.key))),
-        el('small', { textContent: `${styleName(spec.style)} · ${spec.tempo} bpm${stars ? ` · ★ ${stars}/${total}` : ''}` }),
+        el('small', { textContent: `${styleName(spec.style)} · ${spec.tempo} bpm${progress}` }),
       ]);
       card.addEventListener('click', () => openSongPath(spec.id));
       return card;
     });
     const cards = customSpecs.map((spec) => {
-      let stars = 0;
-      let total = 0;
-      try {
-        const p = buildPath(spec, getCards());
-        stars = p.missions.reduce((sum, m) => sum + starsOf(m.id), 0);
-        total = p.missions.length * 3;
-      } catch {
-        // cards not loaded yet
-      }
+      const progress = progressIn(spec);
       const remove = el('button', { type: 'button', className: 'play-song-remove', title: 'Esborra aquest camí', textContent: '✕' });
       remove.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (!window.confirm(`Esborrar el camí «${spec.name}»? (Les estrelles que s'hi han guanyat es perden.)`)) return;
+        if (!window.confirm(`Esborrar el camí «${spec.name}»? (Es perd el que s'hi ha fet.)`)) return;
         customSpecs = customSpecs.filter((x) => x.id !== spec.id);
         save(PATHS_KEY, customSpecs);
         showSongs();
@@ -1373,8 +1387,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         spec.artist ? el('small', { className: 'play-song-artist', textContent: spec.artist }) : null,
         el('div', { className: 'play-goal-chords' }, spec.progression.split('|').map((c) => chordChip(c.trim(), spec.key ?? keyOf(spec)))),
         el('small', { textContent: spec.library
-          ? `${styleName(spec.style)} · ${spec.tempo} bpm${spec.library.autor ? ` · de ${spec.library.autor}` : ''}${total ? ` · ★ ${stars}/${total}` : ''}`
-          : `Compàs ${spec.meter}${spec.chorus ? ' · amb tornada' : ''}${total ? ` · ★ ${stars}/${total}` : ''}` }),
+          ? `${styleName(spec.style)} · ${spec.tempo} bpm${spec.library.autor ? ` · de ${spec.library.autor}` : ''}${progress}`
+          : `Compàs ${spec.meter}${spec.chorus ? ' · amb tornada' : ''}${progress}` }),
       ]);
       card.addEventListener('click', () => openSongPath(spec.id));
       card.addEventListener('keydown', (event) => {
@@ -1488,9 +1502,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         text: 'Quan veus la <b>mà</b>, escolta i no toquis. Quan surt <b>«Ara tu!»</b>, compta i entra.',
       },
       {
-        art: el('div', { className: 'welcome-art stars', textContent: '★★★' }),
-        title: 'Les estrelles diuen com ha anat',
-        text: 'Al final de cada missió surten fins a <b>3 estrelles</b>: marquen la <b>precisió</b> amb què has tocat el repte. Amb <b>una</b> ja pots passar a la següent. Si alguna cosa no encaixa, les marques de la carta et diuen on.',
+        art: el('div', { className: 'welcome-art levels' }, [0, 1, 3].map((n) => levelBadge(n))),
+        title: 'Al final, on ets i què pots fer',
+        text: 'Cada missió acaba dient on ets: <b>En procés</b>, <b>A prop</b> o <b>Ja ho tens!</b>, què t\'ha faltat i què pots fer. Quan vas bé, ja pots passar a la següent. Si alguna cosa no encaixa, les marques de la carta et diuen on.',
       },
     ];
     let i = 0;
@@ -1589,12 +1603,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         el('div', { className: 'play-kicker', textContent: 'Benvinguda' }),
         el('h2', { textContent: 'Qui juga?' }),
         list.length ? el('div', { className: 'play-who-list' }, list.map(([id, st]) => {
-          const got = Object.values(st.stars).reduce((a, b) => a + b, 0);
-          const b = button(`${st.name} · ★ ${got}`, () => enter(id), id === store.current ? 'primary' : 'ghost');
+          const b = button(st.name, () => enter(id), id === store.current ? 'primary' : 'ghost');
           b.classList.add('play-who-name');
           return b;
         })) : null,
-        el('p', { textContent: list.length ? 'No hi ets? Escriu el teu nom:' : 'Escriu el teu nom per guardar les teves estrelles en aquest ordinador:' }),
+        el('p', { textContent: list.length ? 'No hi ets? Escriu el teu nom:' : 'Escriu el teu nom per guardar el que vas fent en aquest ordinador:' }),
         el('div', { className: 'play-who-new' }, [input, button('Entra', create)]),
       ]),
     );
@@ -1631,7 +1644,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       ]),
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'Prova-ho tot' }),
-        el('p', { className: 'play-note', textContent: 'Entra com a professor/a: totes les missions obertes (camí, taller i cançons) i no es guarda cap estrella ni cap intent.' }),
+        el('p', { className: 'play-note', textContent: 'Entra com a professor/a: totes les missions obertes (camí, taller i cançons) i no es guarda cap resultat ni cap intent.' }),
         el('div', { className: 'play-buttons' }, [button('🔓 Entra en mode professor', enterTeacherMode)]),
       ]),
       el('div', { className: 'play-world' }, [
@@ -2033,7 +2046,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       el('div', { className: 'play-hud-progress', title: 'Missions d\'aquest món' }, [
         el('small', { textContent: `Missió ${mission.step + 1} de ${world.missions.length}` }),
         el('div', { className: 'play-hud-bar' }, world.missions.map((m, k) =>
-          el('i', { className: `${k === mission.step ? 'now' : ''}${starsOf(m.id) >= 1 ? ' done' : ''}` }),
+          el('i', { className: `${k === mission.step ? 'now' : ''}${isDone(starsOf(m.id)) ? ' done' : ''}` }),
         )),
       ]),
       hudTools(
@@ -2048,8 +2061,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   /** Plays the current mission again. */
   const again = () => openMission(mission.index < 0 ? mission : mission.index);
 
+  /** The level of the mission so far, in the mission bar. */
   function updateStars() {
-    missionStars.textContent = starText(starsOf(mission.id));
+    missionStars.replaceChildren(levelBadge(mission.study ? undefined : triedOf(mission.id)));
   }
 
   /** Back to the top, except in full screen (there is nothing to scroll there). */
@@ -2085,7 +2099,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
 
   const bandLevel = () => Math.max(0, Math.min(BAND_LEVELS.length - 1, me()?.band ?? 0));
 
-  /** Records a new band level; returns the line to show when it goes up. */
+  /** Records what the student can now do; returns the line to show when it is new. */
   function raiseBandLevel(level) {
     const st = me();
     if (!st || st.teacher || !(level > (st.band ?? 0))) return null;
@@ -2097,10 +2111,21 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       : level === 3
         ? ' <i>A partir d\'ara el teclat de la pantalla s\'amaga quan no et pinta tecles (amb 🎹 el pots recuperar).</i>'
         : '';
-    return `<b>Nivell de banda ${level}: ${BAND_LEVELS[level].title}.</b> ${BAND_LEVELS[level].can}${keys}`;
+    return `<b>Nou a «Què sé fer»:</b> ${BAND_LEVELS[level].can}${keys}`;
   }
 
-  /** The level pill in the mission bar and its ladder, kept up to date. */
+  /** «Què sé fer»: the list of what the student can already do with a group. */
+  function knowList(level) {
+    return BAND_LEVELS.map((lv, k) => el('div', { className: `play-level-step${k <= level ? ' done' : k === level + 1 ? ' now' : ''}` }, [
+      el('b', { textContent: k <= level ? '✓' : k === level + 1 ? '→' : '·' }),
+      el('div', {}, [
+        el('span', { className: 'play-level-title', textContent: lv.title }),
+        el('p', { innerHTML: lv.can }),
+      ]),
+    ]));
+  }
+
+  /** The «Què sé fer» button in the mission bar and its list, kept up to date. */
   function refreshLevelPill() {
     const st = me();
     levelBox.hidden = !st || st.teacher || section === 'improvisa';
@@ -2108,36 +2133,32 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const level = bandLevel();
     const info = BAND_LEVELS[level];
     levelPill.replaceChildren(
-      el('small', { textContent: 'El teu nivell' }),
-      el('strong', { textContent: `${level} de ${BAND_LEVELS.length - 1} · ${info.title}` }),
-      el('span', { className: 'play-band-dots' }, BAND_LEVELS.map((_, k) => el('i', { className: k <= level ? 'on' : '' }))),
+      el('small', { textContent: 'Què sé fer' }),
+      el('strong', { textContent: info.title }),
     );
     levelLadder.replaceChildren(
-      el('strong', { textContent: 'Què podries fer amb el teu grup' }),
-      ...BAND_LEVELS.map((lv, k) => el('div', { className: `play-level-step${k < level ? ' done' : k === level ? ' now' : ''}` }, [
-        el('b', { textContent: k < level ? '✓' : k === level ? '●' : String(k) }),
-        el('div', {}, [
-          el('span', { className: 'play-level-title', textContent: `Nivell ${k} · ${lv.title}` }),
-          el('p', { innerHTML: lv.can }),
-        ]),
-      ])),
-      info.next ? el('p', { className: 'play-note', innerHTML: `<b>Et falta:</b> ${info.next}` }) : el('p', { className: 'play-note', textContent: 'Ja ets al nivell més alt!' }),
+      el('strong', { textContent: 'Què sé fer amb el meu grup' }),
+      ...knowList(level),
+      pathFinished(handsPath(ROCKIN_PATH))
+        ? el('p', { className: 'play-note', textContent: PATH_END_TEXT })
+        : info.next ? el('p', { className: 'play-note', innerHTML: `<b>Et falta:</b> ${info.next}` }) : null,
     );
   }
 
-  /** The card on the map: what you could already do playing with other people. */
+  /** The card on the map: «Què sé fer», what you could already do playing with other people. */
   function bandCard() {
     const level = bandLevel();
     const info = BAND_LEVELS[level];
-    return el('div', { className: 'play-band-level' }, [
-      el('div', { className: 'play-band-head' }, [
-        el('small', { textContent: 'Per tocar amb els companys' }),
-        el('strong', { textContent: `Nivell ${level} · ${info.title}` }),
+    const box = el('details', { className: 'play-band-level' }, [
+      el('summary', { className: 'play-band-head' }, [
+        el('small', { textContent: 'Què sé fer' }),
+        el('strong', { textContent: info.title }),
+        el('p', { innerHTML: info.can }),
       ]),
-      el('div', { className: 'play-band-dots' }, BAND_LEVELS.map((_, k) => el('i', { className: k <= level ? 'on' : '' }))),
-      el('p', { innerHTML: info.can }),
-      info.next ? el('p', { className: 'play-note', innerHTML: `Següent: ${info.next}` }) : null,
+      el('div', { className: 'play-level-list' }, knowList(level)),
+      pathFinished() ? el('p', { className: 'play-note', textContent: PATH_END_TEXT }) : info.next ? el('p', { className: 'play-note', innerHTML: `Següent: ${info.next}` }) : null,
     ].filter(Boolean));
+    return box;
   }
 
   function cancelAutoNext() {
@@ -2191,11 +2212,51 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     return item;
   }
 
-  function finishMission(got, { title, text, tips = [], retry, retryLabel = '↻ Torna-ho a provar', extra = [], ratio = null, tempo = null, detail = null, groove = null }) {
+  /** Tries of the current mission in a row (the last ones) that stayed «En procés». */
+  function stuckTries() {
+    const log = me()?.log ?? [];
+    let n = 0;
+    for (let k = log.length - 1; k >= 0; k--) {
+      const e = log[k];
+      if (e.m !== mission.id || e.p !== path.id) continue;
+      if (stepLevel(e.s) > 0) break;
+      n++;
+    }
+    return n;
+  }
+
+  /**
+   * An earlier mission of the path that trains what was missing: the change
+   * or the chord that failed most, or else the mission just before.
+   */
+  function baseMission(focus) {
+    const before = path.missions.slice(0, Math.max(0, mission.index));
+    let k = -1;
+    if (focus?.change) {
+      const [a, b] = focus.change;
+      k = before.findIndex((m) => m.type === 'change' && ((m.from === a && m.to === b) || (m.from === b && m.to === a)));
+    }
+    if (k === -1 && focus?.chord) k = before.findIndex((m) => m.type === 'chord' && m.chord === focus.chord);
+    if (k === -1 && mission.index > 0) k = mission.index - 1;
+    return k >= 0 && k < mission.index ? k : null;
+  }
+
+  /**
+   * The result of a mission, in three blocks: the level (with a short line of
+   * data), what was missing (`gaps`, plain text, also kept in the log for the
+   * teacher) and what you can do (`tips`, `notes` and a recommendation).
+   * got: 0–3, as always (3 = «Ja ho tens!», 2 = «A prop», 0–1 = «En procés»;
+   * 1 still opens the next mission, as before).
+   */
+  function finishMission(got, { title, text, data = null, gaps = [], notes = [], tips = [], focus = null, toTop: toTopText = null, retry, retryLabel = '↻ Torna-ho a provar', extra = [], ratio = null, tempo = null, detail = null, groove = null }) {
     const st = me();
     const adaptive = mission.adaptive ?? null;
+    const before = triedOf(mission.id);
+    const wasFinished = !adaptive && pathFinished();
     if (st && !adaptive && !mission.study) st.stars[mission.id] = Math.max(got, st.stars[mission.id] ?? 0);
-    const entry = logTry({ s: got, r: ratio, tempo, ...(adaptive ? { a: adaptive.step.skill ?? `stage:${adaptive.step.stage}`, k: adaptive.kit.key } : {}) });
+    const level = stepLevel(got);
+    const plainGaps = gaps.filter(Boolean).slice(0, 3);
+    const entry = logTry({ s: got, r: ratio, tempo, ...(plainGaps.length && level < 2 ? { g: plainGaps } : {}), ...(adaptive ? { a: adaptive.step.skill ?? `stage:${adaptive.step.stage}`, k: adaptive.kit.key } : {}) });
     const learnt = adaptive ? adaptiveResult(got, ratio, detail) : null;
     const band = got >= 1 ? raiseBandLevel(bandLevelOf(mission)) : null;
     saveStore();
@@ -2205,21 +2266,48 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const worldDone = next && next.world !== mission.world;
     const goNext = adaptive ? () => openAdaptive(adaptive.kit) : () => openMission(mission.index + 1);
     const canGo = adaptive ? true : got >= 1 && Boolean(next);
-    const stars = el('div', { className: 'play-result-stars' }, [0, 1, 2].map((k) =>
-      el('span', { className: k < got ? 'on' : '', style: `animation-delay:${0.15 + k * 0.25}s`, textContent: '★' }),
-    ));
+    const finishedNow = !adaptive && !mission.study && !wasFinished && pathFinished();
     const buttons = [];
     if (retry) buttons.push(button(retryLabel, retry, got >= 1 ? 'ghost' : 'primary'));
-    if (canGo) buttons.unshift(button(adaptive ? 'Següent repte →' : worldDone ? 'Món següent →' : 'Següent →', goNext));
+    if (canGo) buttons.unshift(button(adaptive ? 'Següent repte →' : next.world?.level2 && !mission.world?.level2 ? 'Nivell 2, per aprofundir →' : worldDone ? 'Món següent →' : 'Següent →', goNext));
     buttons.push(...extra);
     buttons.push(button(adaptive ? 'El meu camí' : 'Mapa', showMap, 'ghost'));
     const countdown = el('p', { className: 'play-note' });
-    if (learnt) {
-      text = `${text ?? ''}<br><span class="play-learnt">${learnt}</span>`;
+
+    // 3. What you can do: the tips of the try, the notes of the game and a step to take.
+    const todo = [...tips, ...notes.filter(Boolean)];
+    let advice = null;
+    let adviceButton = null;
+    if (adaptive || mission.study) {
+      advice = null;
+    } else if (finishedNow) {
+      advice = `<b>${PATH_END_TEXT}</b>`;
+    } else if (level === 2) {
+      if (stepLevel(before) === 2) advice = 'Això ja ho tens: no cal que ho practiquis més aquí. Porta-ho al grup.';
+      else if (next) advice = `Següent pas: <b>${escapeHtml(next.title)}</b>.`;
+      else {
+        const resume = nextIndex();
+        if (resume !== null && resume !== mission.index) {
+          advice = `Et queda per polir: <b>${escapeHtml(path.missions[resume].title)}</b>.`;
+          adviceButton = button(`→ ${path.missions[resume].title}`, () => openMission(resume), 'ghost');
+        }
+      }
+    } else if (level === 1) {
+      advice = `Ja pots passar a la següent. ${toTopText ?? 'Per a «Ja ho tens!», torna-hi quan vulguis i fes-ho sense errades.'}`;
+    } else {
+      const stuck = stuckTries();
+      const base = stuck >= 2 ? baseMission(focus) : null;
+      if (base !== null) {
+        advice = `Ja fa ${stuck} intents que queda «En procés». Val la pena tornar un moment a <b>${escapeHtml(path.missions[base].title)}</b>, que treballa just això, i després tornar aquí.`;
+        adviceButton = button(`↩ ${path.missions[base].title}`, () => openMission(base), 'ghost');
+      } else if (got >= 1 && next) {
+        advice = 'Pots passar a la següent, però aquest pas encara està en procés: quan hagis fet la resta, el camí t\'hi tornarà a portar.';
+      } else {
+        advice = 'Torna-hi amb calma, fixant-te en el que t\'ha faltat.';
+      }
     }
-    if (band) {
-      text = `${text ?? ''}<br><span class="play-band-up">🎸 ${band}</span>`;
-    }
+    if (learnt) todo.push(`<span class="play-learnt">${learnt}</span>`);
+    if (band) todo.push(`<span class="play-band-up">🎸 ${band}</span>`);
 
     // Self-assessment after the goal missions.
     let reflect = null;
@@ -2235,25 +2323,35 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         });
         return b;
       });
-      reflect = el('div', { className: 'play-reflect' }, [el('b', { textContent: got === 3 ? 'Com t\'ha anat?' : 'On has perdut el fil?' }), el('div', {}, chips)]);
+      reflect = el('div', { className: 'play-reflect' }, [el('b', { textContent: level === 2 ? 'Com t\'ha anat?' : 'On has perdut el fil?' }), el('div', {}, chips)]);
     }
 
-    const side = tips.length || reflect
-      ? [tips.length ? el('ul', {}, tips.map((t) => el('li', { innerHTML: t }))) : null, reflect]
-      : null;
+    const showGaps = plainGaps.length > 0;
+    const side = [
+      showGaps ? el('div', { className: 'play-result-block gaps' }, [
+        el('h3', { textContent: level === 2 ? 'Per polir' : 'Què t\'ha faltat' }),
+        el('ul', {}, plainGaps.map((t) => el('li', { textContent: t }))),
+      ]) : null,
+      todo.length || advice ? el('div', { className: 'play-result-block todo' }, [
+        el('h3', { textContent: 'Què pots fer' }),
+        todo.length ? el('ul', {}, todo.map((t) => el('li', { innerHTML: t }))) : null,
+        advice ? el('p', { className: 'play-advice', innerHTML: advice }) : null,
+        adviceButton ? el('div', { className: 'play-buttons' }, [adviceButton]) : null,
+      ]) : null,
+      reflect,
+    ].filter(Boolean);
     setPanel({
-      kicker: got >= 1 ? 'Missió superada' : 'Encara no',
+      kicker: `${TYPE_LABEL[mission.type] ?? 'Missió'} · resultat`,
       title,
-      big: [stars],
-      text,
+      big: [el('div', { className: 'play-result-level' }, [levelBadge(got), data || text ? el('span', { innerHTML: [data, text].filter(Boolean).join(' ') }) : null])],
       extra: countdown,
-      side,
+      side: side.length ? side : null,
       buttons,
-      tone: got >= 1 ? 'good' : 'bad',
+      tone: level === 2 ? 'good' : level === 1 ? 'near' : 'progress',
     });
     if (got >= 2) {
       sfx.good();
-      confetti();
+      if (level === 2) confetti();
     } else if (got === 1) sfx.ok();
     else sfx.bad();
     // The band keeps playing while the next challenge is announced.
@@ -2261,7 +2359,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     step = { space: canGo ? goNext : retry };
     // The goal missions wait for the self-assessment; the rest goes on by itself:
     // passed → next mission, not passed → the same one again (with more help).
-    if (!reflect) {
+    // At the end of the path, nothing goes on by itself: the message stays.
+    if (!reflect && !finishedNow) {
       if (canGo && got >= 1) autoGo(countdown, AUTO_NEXT_SECONDS, adaptive ? 'Següent repte' : 'Següent missió', goNext);
       else if (retry && got === 0) autoGo(countdown, AUTO_RETRY_SECONDS, 'Ho tornem a provar', retry);
     }
@@ -2517,8 +2616,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           finishMission(hinted ? 2 : 3, {
             title: `Ja saps el ${chordLong(symbol)}!`,
             text: `${name} = <b>${noteNames.join(' – ')}</b>` +
-              (countable ? `: comença al ${noteNames[0]}, salta ${third} tecles i després ${fifth}.` : '.') +
-              (hinted ? ' Has fet servir una pista: torna-ho a provar per a la tercera estrella.' : ''),
+              (countable ? `: comença al ${noteNames[0]}, salta ${third} tecles i després ${fifth}.` : '.'),
+            gaps: hinted ? ['Has fet servir una pista.'] : [],
+            toTop: 'Torna-hi i fes-lo sense pistes per a «Ja ho tens!».',
             retry: () => again(),
           });
           return;
@@ -2539,6 +2639,34 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
    * long-note card; the ball waits on the current card until the chord is
    * played, then hops to the next. Wrong notes are marked on the card.
    */
+  /** What was missing in a step-by-step try: where the slips were (plain text). */
+  function stepsGaps(items, perItem, hints) {
+    const gaps = [];
+    const focus = {};
+    const changes = new Map();
+    const chords = new Map();
+    items.forEach((item, k) => {
+      if (!perItem[k]) return;
+      const prev = items[k - 1]?.chord;
+      if (prev && prev !== item.chord) changes.set(`${prev}>${item.chord}`, (changes.get(`${prev}>${item.chord}`) ?? 0) + perItem[k]);
+      chords.set(item.chord, (chords.get(item.chord) ?? 0) + perItem[k]);
+    });
+    const top = (map) => [...map].sort((a, b) => b[1] - a[1]);
+    const change = top(changes)[0];
+    if (change) {
+      const [a, b] = change[0].split('>');
+      focus.change = [a, b];
+      gaps.push(`El canvi ${chordName(a)} → ${chordName(b)} (${change[1]} ${change[1] === 1 ? 'errada' : 'errades'}).`);
+    }
+    const list = top(chords).filter(([c]) => !focus.change || c !== focus.change[1]).map(([c]) => chordName(c));
+    if (list.length) {
+      if (!focus.change) focus.chord = top(chords)[0][0];
+      gaps.push(`${list.length === 1 ? 'Errades a' : 'Errades als acords'} ${list.slice(0, 3).join(', ')}.`);
+    }
+    if (hints) gaps.push(`${hints} ${hints === 1 ? 'pista' : 'pistes'}: la propera vegada prova-ho sense.`);
+    return { gaps: gaps.slice(0, 3), focus };
+  }
+
   function runSteps({ items, columns, kicker, intro, onDone, strictVoicing = false }) {
     const world = mission.world;
     const two = Boolean(world.twoHands) && items.every((item) => item.left); // items then have `left` notes too
@@ -2589,7 +2717,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const finish = () => {
       finished = true;
       const bad = mistakes + hints;
-      onDone({ mistakes, hints, perItem, stars: bad === 0 ? 3 : bad <= 2 ? 2 : 1 });
+      onDone({ mistakes, hints, perItem, stars: bad === 0 ? 3 : bad <= 2 ? 2 : 1, ...stepsGaps(items, perItem, hints) });
       return null;
     };
     const render = (message = '', tone = '') => {
@@ -2717,8 +2845,10 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         ? (leftMode() === 'bass' ? 'Dreta: l\'acord. Esquerra: la nota de baix del mateix acord. Les dues alhora.' : 'Les dues mans fan el mateix acord, alhora.')
         : world.inversions ? 'Toca cada acord a la posició marcada, la més propera a l\'anterior.' : 'Toca cada acord amb la fonamental a baix.',
       strictVoicing: Boolean(world.inversions),
-      onDone: ({ mistakes, hints, stars }) => finishMission(stars, {
+      onDone: ({ mistakes, hints, stars, gaps, focus }) => finishMission(stars, {
         title: 'Roda feta!',
+        gaps,
+        focus,
         text: `Dues voltes a la roda: la primera amb ajuda i la segona de memòria. ${mistakes || hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`,
         retry: () => again(),
       }),
@@ -2793,8 +2923,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         kicker: 'Canvi · el joc t\'espera',
         intro: `Va i torna: ${chordName(from)} – ${chordName(to)}.`,
         strictVoicing: Boolean(world.inversions),
-        onDone: ({ mistakes, hints, stars }) => finishMission(stars, {
+        onDone: ({ mistakes, hints, stars, gaps }) => finishMission(stars, {
           title: 'Canvi après!',
+          gaps,
           text: `Tres vegades ${chordName(from)} → ${chordName(to)}. ${mistakes || hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`,
           retry: () => again(),
           extra: [button('Torna a mirar el canvi', look, 'ghost')],
@@ -2885,6 +3016,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         finishMission(bad === 0 ? 3 : bad <= 2 ? 2 : 1, {
           title: 'Inversions apreses!',
           text: `${chordName(symbol)}: ${positions.map((p) => p.map((n) => keyName(n, symbol)).join('-')).join(' · ')}.`,
+          gaps: [mistakes ? `${mistakes} ${mistakes === 1 ? 'posició amb la nota de baix equivocada' : 'posicions amb la nota de baix equivocada'}.` : '', hints ? `${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : ''],
           retry: () => again(),
         });
         return;
@@ -2909,7 +3041,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     { tier: 'medium', tempo: 8, name: 'Cartes intermèdies, més ràpid' },
     { tier: 'hard', tempo: -4, name: 'Cartes difícils' },
     { tier: 'hard', tempo: 6, name: 'Cartes difícils, més ràpid' },
-    { tier: 'hard', tempo: 14, name: 'Mestre de la banda' },
+    { tier: 'hard', tempo: 14, name: 'Cartes difícils, molt ràpid' },
   ];
   const JAM_UP = 0.85;
   const JAM_DOWN = 0.6;
@@ -2949,7 +3081,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         el('strong', { textContent: song.name }),
         song.sub ? el('small', { className: 'play-song-artist', textContent: song.sub }) : null,
         el('div', { className: 'play-goal-chords' }, song.wheel.map((c) => chordChip(c, song.chordKey))),
-        el('small', { textContent: memory.sets ? `Rècord: nivell ${memory.best + 1} de ${JAM_LEVELS.length}` : 'Encara no hi has tocat' }),
+        el('small', { textContent: memory.sets ? `La propera vegada: ${JAM_LEVELS[Math.max(0, Math.min(JAM_LEVELS.length - 1, memory.level))].name.toLowerCase()}` : 'Encara no hi has tocat' }),
       ]);
       b.addEventListener('click', () => startJam(song));
       return b;
@@ -2991,8 +3123,10 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     let sets = 0;
     let clean = 0;
     let total = 0;
-    let best = levelIndex;
     let stopped = false;
+    // Every bar of the session, to say at the end what was missing.
+    const allResults = [];
+    const allStats = {};
     const meter = parseTimeSignature(song.meter);
     const songTempo = song.tempo ? Math.round(song.tempo * (speed.tempo / 76) * (meter.compound ? 0.8 : 1)) : speed.tempo;
     const baseTempo = Math.max(60, Math.min(126, songTempo));
@@ -3022,15 +3156,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       hud.replaceChildren(
         el('div', { className: 'play-hud-text' }, [
           el('small', { textContent: `Toca amb la banda · ${song.name}` }),
-          el('strong', { textContent: `Nivell ${levelIndex + 1} · ${JAM_LEVELS[levelIndex].name}` }),
+          el('strong', { textContent: JAM_LEVELS[levelIndex].name }),
         ]),
         el('div', { className: 'play-hud-goal' }, [
           el('small', { textContent: 'La roda' }),
           el('div', { className: 'play-goal-chords' }, song.wheel.map((c) => chordChip(c, song.chordKey))),
-        ]),
-        el('div', { className: 'play-hud-progress', title: 'Nivells' }, [
-          el('small', { textContent: `Rècord: nivell ${Math.max(best, memory.best) + 1}` }),
-          el('div', { className: 'play-hud-bar' }, JAM_LEVELS.map((_, k) => el('i', { className: k === levelIndex ? 'now' : k < levelIndex ? 'done' : '' }))),
         ]),
       );
     };
@@ -3052,7 +3182,6 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
 
     const save = () => {
       memory.level = levelIndex;
-      memory.best = Math.max(memory.best, best);
       saveStore();
     };
 
@@ -3061,20 +3190,34 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       stopSession();
       save();
       const st = me();
+      // The session as a whole, with the marks of the band missions; nothing adds up from one session to the next.
+      const got = total ? starsFor(clean / total, 'band') : 0;
+      const { gaps } = barGaps(allResults, { early: 0, late: 0, ...allStats });
       if (st && !st.teacher && sets) {
-        st.log.push({ m: 'jam', p: song.key, t: Date.now(), s: best + 1, r: total ? clean / total : 0 });
+        st.log.push({ m: 'jam', p: song.key, t: Date.now(), s: got, r: total ? clean / total : 0, ...(gaps.length && got < 3 ? { g: gaps } : {}) });
         saveStore();
       }
+      const level = stepLevel(got);
+      const todo = sets ? [
+        ...(clean < total ? tipsFor({ early: 0, late: 0, ...allStats }) : []),
+        `La propera vegada comences amb: <b>${JAM_LEVELS[levelIndex].name.toLowerCase()}</b>.`,
+      ] : [];
       setPanel({
-        kicker: 'Toca amb la banda',
-        title: sets ? 'Bona sessió!' : 'Aturat',
-        big: [el('div', { className: 'play-target good' }, [
-          el('small', { textContent: 'Nivell més alt' }),
-          el('strong', { textContent: String(best + 1) }),
-          el('span', { textContent: JAM_LEVELS[best].name }),
-        ])],
-        text: sets ? `${sets} ${sets === 1 ? 'tanda' : 'tandes'} · ${clean} de ${total} compassos nets. La propera vegada comences al nivell ${levelIndex + 1}.` : '',
-        tone: 'good',
+        kicker: 'Toca amb la banda · resultat',
+        title: sets ? song.name : 'Aturat',
+        big: sets ? [el('div', { className: 'play-result-level' }, [levelBadge(got), el('span', { textContent: `${sets} ${sets === 1 ? 'tanda' : 'tandes'} · ${clean} de ${total} compassos nets.` })])] : null,
+        side: sets ? [
+          gaps.length ? el('div', { className: 'play-result-block gaps' }, [
+            el('h3', { textContent: level === 2 ? 'Per polir' : 'Què t\'ha faltat' }),
+            el('ul', {}, gaps.map((t) => el('li', { textContent: t }))),
+          ]) : null,
+          el('div', { className: 'play-result-block todo' }, [
+            el('h3', { textContent: 'Què pots fer' }),
+            el('ul', {}, todo.map((t) => el('li', { innerHTML: t }))),
+            level === 2 ? el('p', { className: 'play-advice', textContent: 'Això ja ho tens: ara toca-ho amb el teu grup.' }) : null,
+          ]),
+        ] : null,
+        tone: !sets ? '' : level === 2 ? 'good' : level === 1 ? 'near' : 'progress',
         buttons: [
           button('▶ Torna a tocar', () => startJam(song)),
           button('Tria una altra cançó', () => {
@@ -3094,7 +3237,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       const bars = [];
       const rows = [];
       cards.forEach((c, r) => {
-        const row = { bars: [], label: r === 0 ? `Tanda ${sets + 1} · nivell ${levelIndex + 1}` : '' };
+        const row = { bars: [], label: r === 0 ? `Tanda ${sets + 1}` : '' };
         for (let k = 0; k < perRow; k++) {
           const chord = song.wheel[k % song.wheel.length];
           row.bars.push(bars.length);
@@ -3120,13 +3263,15 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         voicings,
         hands: two ? { left: mode, leftVoicings } : null,
         onPhase: (phase) => setStatus({
-          kicker: phase === 'play' ? `Nivell ${levelIndex + 1}` : phase === 'end' ? 'Fi de la tanda' : 'Preparat',
+          kicker: phase === 'play' ? 'Toca' : phase === 'end' ? 'Fi de la tanda' : 'Preparat',
           text: phase === 'play' ? `${level.name} · ${tempo} bpm. <span class="play-muted">Espai: pausa · Esc: atura</span>` : phase === 'end' ? 'Escolta com acaba…' : 'Compta amb la banda…',
           tone: phase === 'play' ? '' : 'ready',
           buttons,
         }),
-        onEnd: ({ results }) => {
+        onEnd: ({ results, stats }) => {
           if (stopped) return;
+          allResults.push(...results);
+          for (const [k, v] of Object.entries(stats ?? {})) allStats[k] = (allStats[k] ?? 0) + v;
           const good = results.filter((r) => r.clean).length;
           const ratio = good / results.length;
           sets++;
@@ -3139,20 +3284,19 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           let tone = '';
           if (ratio >= JAM_UP && levelIndex < JAM_LEVELS.length - 1) {
             levelIndex++;
-            best = Math.max(best, levelIndex);
-            message = `Molt bé! Pugem al <b>nivell ${levelIndex + 1}</b>: ${JAM_LEVELS[levelIndex].name.toLowerCase()}.`;
+            message = `Molt bé! Ara, <b>${JAM_LEVELS[levelIndex].name.toLowerCase()}</b>.`;
             tone = 'good';
             sfx.good();
           } else if (ratio >= JAM_UP) {
-            message = 'Perfecte al nivell més alt! Seguim.';
+            message = 'Molt bé! Seguim amb les cartes més difícils.';
             tone = 'good';
             sfx.good();
           } else if (ratio < JAM_DOWN && levelIndex > 0) {
             levelIndex--;
-            message = `Baixem al <b>nivell ${levelIndex + 1}</b> per agafar confiança.`;
+            message = `Ara, <b>${JAM_LEVELS[levelIndex].name.toLowerCase()}</b>, per agafar confiança.`;
             sfx.ok();
           } else {
-            message = 'Seguim al mateix nivell.';
+            message = 'Seguim amb les mateixes cartes.';
           }
           save();
           hudNow();
@@ -3188,8 +3332,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     setPanel({
       kicker: 'Toca amb la banda',
       title: song.name,
-      text: `Comences al <b>nivell ${levelIndex + 1}</b> (${JAM_LEVELS[levelIndex].name.toLowerCase()}). La banda no s'atura: si t'equivoques, torna a entrar a la carta següent. ${two ? `Toques amb <b>${HANDS[mode].short}</b>.` : ''}`,
-      list: ['Quatre cartes per tanda, una per volta de la roda.', 'Amb el 85% de compassos nets pugeu de nivell; per sota del 60%, baixeu.'],
+      text: `Comences amb: <b>${JAM_LEVELS[levelIndex].name.toLowerCase()}</b>. La banda no s'atura: si t'equivoques, torna a entrar a la carta següent. ${two ? `Toques amb <b>${HANDS[mode].short}</b>.` : ''}`,
+      list: ['Quatre cartes per tanda, una per volta de la roda.', 'Amb el 85% de compassos nets, la tanda següent és més difícil; per sota del 60%, més fàcil.'],
       buttons: [button('▶ Comença', playSet), button('Tria una altra cançó', () => {
         screen = 'jam';
         showMap();
@@ -3272,6 +3416,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           return finishMission(bad === 0 ? 3 : bad <= 2 ? 2 : 1, {
             title: 'Arpegis fets!',
             text: `Tots els acords de la roda, nota a nota. ${bad ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`,
+            gaps: [mistakes ? `${mistakes} ${mistakes === 1 ? 'nota equivocada o que no pujava' : 'notes equivocades o que no pujaven'}.` : '', hints ? `${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : ''],
             retry: again,
           });
         }
@@ -3490,7 +3635,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const parts = [];
     // "If you get it right you go up a level": say it out loud.
     const levelAfter = levelOf(state, skills, nextStep(structuredClone(state), skills).stage);
-    if (levelAfter.n > levelBefore.n) parts.push(`🎚 Puges al nivell ${levelAfter.n} de ${levelAfter.total}: ${levelAfter.name}.`);
+    if (levelAfter.n > levelBefore.n) parts.push(`Ara treballes l'etapa ${levelAfter.n} de ${levelAfter.total}: ${levelAfter.name}.`);
     if (after > before) parts.push(`🧭 +${after - before} ${after - before === 1 ? 'aprenentatge' : 'aprenentatges'}: ja en saps ${after} de ${skills.length}.`);
     else parts.push(`🧭 Saps ${after} de ${skills.length} aprenentatges.`);
     if (nowWeak.length) parts.push(`Cal practicar: ${nowWeak.map((x) => x.label).join(', ')}.`);
@@ -3507,7 +3652,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const lvl = levelOf(state, skills, s.stage);
     hud.replaceChildren(
       el('div', { className: 'play-hud-text' }, [
-        el('small', { textContent: `Nivell ${lvl.n}/${lvl.total} · ${lvl.name} · ${MODE[s.mode]}${kit.key.startsWith('rockin') ? '' : ` · ${kit.title}`}` }),
+        el('small', { textContent: `Etapa ${lvl.n} de ${lvl.total} · ${lvl.name} · ${MODE[s.mode]}${kit.key.startsWith('rockin') ? '' : ` · ${kit.title}`}` }),
         el('strong', { textContent: mission.title }),
       ]),
       el('div', { className: 'play-hud-goal' }, [
@@ -3607,7 +3752,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       columns: Math.min(8, symbols.length),
       kicker: 'Prova · el joc t\'espera',
       intro: 'Sense ajuda: tota la roda, acord per acord.',
-      onDone: ({ mistakes, hints, stars, perItem }) => {
+      onDone: ({ mistakes, hints, stars, perItem, gaps }) => {
         const perChange = {};
         const perChord = {};
         symbols.forEach((chord, k) => {
@@ -3620,6 +3765,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         });
         finishMission(stars, {
           title: mistakes + hints ? 'Roda feta!' : 'Cap errada!',
+          gaps,
           text: mistakes + hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Tots els canvis a la primera.',
           retry: again,
           detail: { perChange, perChord },
@@ -3673,7 +3819,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           ]),
         ]),
         el('div', { className: 'play-resume' }, [
-          el('small', { textContent: fresh ? 'Comencem:' : `Nivell ${levelOf(state, skills, peek.stage).n} de ${levelOf(state, skills, peek.stage).total} · ${STAGE_NAMES[peek.stage]}` }),
+          el('small', { textContent: fresh ? 'Comencem:' : `Etapa ${levelOf(state, skills, peek.stage).n} de ${levelOf(state, skills, peek.stage).total} · ${STAGE_NAMES[peek.stage]}` }),
           el('strong', { textContent: nextMission.title }),
           el('span', { className: 'play-note', textContent: peek.reason }),
           button('▶ Juga', () => openAdaptive(kit)),
@@ -4035,8 +4181,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const next = () => {
       if (done >= rounds) {
         return finishMission(starsForMistakes(mistakes), {
-          title: 'Molt bé!',
+          title: 'Notes trobades',
           text: mistakes ? `${rounds} notes trobades amb ${mistakes} ${mistakes === 1 ? 'errada' : 'errades'}.` : `${rounds} notes trobades sense cap errada!`,
+          gaps: mistakes > 1 ? [`${mistakes} tecles equivocades abans de trobar la nota.`] : [],
           retry: () => again(),
         });
       }
@@ -4087,8 +4234,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const next = () => {
       if (done >= rounds) {
         return finishMission(starsForMistakes(mistakes), {
-          title: 'Bons salts!',
-          text: mistakes ? `${rounds} salts amb ${mistakes} ${mistakes === 1 ? 'errada' : 'errades'}.` : `${rounds} salts perfectes!`,
+          title: 'Salts fets',
+          text: mistakes ? `${rounds} salts amb ${mistakes} ${mistakes === 1 ? 'errada' : 'errades'}.` : `${rounds} salts sense errades.`,
+          gaps: mistakes > 1 ? [`${mistakes} salts mal comptats: compta totes les tecles, blanques i negres.`] : [],
           retry: () => again(),
         });
       }
@@ -4325,6 +4473,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         return finishMission(starsForMistakes(mistakes), {
           title: 'Acords construïts!',
           text: mistakes ? `${rounds} acords amb ${mistakes} ${mistakes === 1 ? 'errada o ajuda' : 'errades o ajudes'}.` : `${rounds} acords sense cap errada!`,
+          gaps: mistakes > 1 ? [`${mistakes} errades o ajudes en construir-los.`] : [],
           retry: () => again(),
         });
       }
@@ -4364,8 +4513,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       step = null;
       const got = built >= 10 ? 3 : built >= 6 ? 2 : built >= 3 ? 1 : 0;
       finishMission(got, {
-        title: `${built} ${built === 1 ? 'acord' : 'acords'}!`,
-        text: `En ${seconds} segons. Per a 1 estrella en calen 3; per a 2, 6; per a 3, 10.`,
+        title: `${built} ${built === 1 ? 'acord' : 'acords'} en ${seconds} segons`,
+        text: 'Amb 6 acords és «A prop»; amb 10, «Ja ho tens!».',
+        gaps: built < 10 ? [`${built < 6 ? 6 - built : 10 - built} ${(built < 6 ? 6 - built : 10 - built) === 1 ? 'acord més' : 'acords més'} per a «${built < 6 ? 'A prop' : 'Ja ho tens!'}».`] : [],
         retry: () => again(),
       });
     };
@@ -4684,21 +4834,25 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
             tempoNote = drop - TEMPO_STEP > 0 ? `Molt bé! Ara una mica més ràpid (tempo ${tempoNow()}).` : 'Molt bé! Ara al tempo normal.';
           }
           const recoveries = results.filter((r, k) => k > 0 && r.clean && !results[k - 1].clean).length;
-          const need = type === 'band' ? Math.ceil(results.length * 0.6) : Math.ceil(results.length * 0.75);
+          // The same marks as starsFor(): «A prop» from 80% of clean bars (band 70%),
+          // «Ja ho tens!» from 95% (band 85%); the next mission opens from 60% (band 50%).
+          const near = Math.ceil(results.length * (type === 'band' ? 0.7 : 0.8));
+          const gapsInfo = barGaps(results, stats);
           finishMission(got, {
-            title: got === 3 ? 'Perfecte!' : got === 2 ? 'Molt bé!' : got === 1 ? 'Superada!' : 'Encara no',
+            title: mission.title,
             ratio,
             tempo,
-            text: [
-              `${clean} de ${results.length} compassos sense cap error.`,
-              got === 0 ? `Per superar-la en calen ${need}.` : '',
-              slowed && got >= 2 ? 'Per a la tercera estrella, fes-ho perfecte al tempo normal.' : '',
-              type === 'band' && recoveries ? `Has tornat a entrar ${recoveries} ${recoveries === 1 ? 'vegada' : 'vegades'} després d'un error: així es toca en grup!` : '',
+            data: `${clean} de ${results.length} compassos nets.${got < 2 ? ` Per a «A prop» en calen ${near}.` : ''}`,
+            text: type === 'band' && recoveries ? `Has tornat a entrar ${recoveries} ${recoveries === 1 ? 'vegada' : 'vegades'} després d'un error: així es toca en grup!` : '',
+            gaps: gapsInfo.gaps,
+            focus: gapsInfo.focus,
+            toTop: slowed ? 'Per a «Ja ho tens!», fes-ho net al tempo normal.' : 'Per a «Ja ho tens!», gairebé tots els compassos han de ser nets.',
+            notes: [
               tempoNote,
               helpNote,
               showDemo ? `<b>Abans de tornar-hi t'ho ensenyo:</b> el piano toca ${multi ? 'totes les cartes, tal com les has de tocar,' : demoCount === 1 ? 'la carta' : 'la roda'} i la pilota et va mostrant on cau cada nota.${inARow >= 2 ? ' Mira-t\'ho amb calma, que no corre pressa.' : ''}` : '',
               clean < results.length ? 'Mira les marques de les cartes per veure què ha passat.' : '',
-            ].filter(Boolean).join(' '),
+            ],
             tips: clean === results.length ? [] : tipsFor(stats),
             detail: level === 1 ? null : { results },
             groove: { style, tempo, chords: progression, meter: world.meter ?? '4/4' },
@@ -4769,6 +4923,55 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       has((v) => v === 2) ? '<span class="legend bar"></span> Barra: mantén la tecla.' : null,
       split ? '<span class="legend half"></span> Rodona partida: dues parts dins del temps.' : null,
     ].filter(Boolean);
+  }
+
+  /**
+   * What was missing in a try with music, from the bars themselves: the change
+   * or the chord that failed most, early or late, and the most common slip.
+   * Plain text (it is kept in the log for the teacher). focus: { change, chord }.
+   */
+  function barGaps(results, stats) {
+    const gaps = [];
+    const focus = {};
+    const changes = new Map();
+    const chords = new Map();
+    for (const r of results) {
+      const count = (map, key) => {
+        const c = map.get(key) ?? { bad: 0, all: 0 };
+        c.all++;
+        if (!r.clean) c.bad++;
+        map.set(key, c);
+      };
+      count(chords, r.chord);
+      if (r.prev && r.prev !== r.chord) count(changes, `${r.prev}>${r.chord}`);
+    }
+    const worst = (map) => [...map].filter(([, c]) => c.bad >= 2 || (c.bad >= 1 && c.bad / c.all >= 0.5)).sort((a, b) => b[1].bad / b[1].all - a[1].bad / a[1].all || b[1].bad - a[1].bad)[0];
+    const change = worst(changes);
+    const chord = worst(chords);
+    // A change is only worth naming when the chord itself fails mostly right after it.
+    if (change && (!chord || change[1].bad >= chord[1].bad * 0.6)) {
+      const [a, b] = change[0].split('>');
+      focus.change = [a, b];
+      gaps.push(`El canvi ${chordName(a)} → ${chordName(b)} (${change[1].bad} de ${change[1].all} vegades).`);
+    } else if (chord && new Set(results.map((r) => r.chord)).size > 1) {
+      focus.chord = chord[0];
+      gaps.push(`Els compassos de ${chordName(chord[0])} (${chord[1].bad} de ${chord[1].all}).`);
+    }
+    if (stats.early >= 3 && stats.early > stats.late * 2) gaps.push('Vas una mica avançat respecte de la pilota.');
+    else if (stats.late >= 3 && stats.late > stats.early * 2) gaps.push('Vas una mica endarrerit respecte de la pilota.');
+    const slips = [
+      ['missed', (n) => `${n} ${n === 1 ? 'rodona' : 'rodones'} sense tocar.`],
+      ['wrong', (n) => `${n} ${n === 1 ? 'nota que no era' : 'notes que no eren'} de l'acord.`],
+      ['incomplete', (n) => `${n} ${n === 1 ? 'acord incomplet' : 'acords incomplets'}.`],
+      ['spread', (n) => `${n} ${n === 1 ? 'acord' : 'acords'} amb les tecles separades.`],
+      ['offbeat', (n) => `${n} ${n === 1 ? 'nota' : 'notes'} on no tocava.`],
+      ['extra', (n) => `${n} ${n === 1 ? 'nota' : 'notes'} de més.`],
+      ['short', (n) => `${n} ${n === 1 ? 'nota llarga' : 'notes llargues'} que no has aguantat fins al final.`],
+      ['rest', (n) => `${n} ${n === 1 ? 'nota que sonava' : 'notes que sonaven'} en un silenci.`],
+      ['contour', (n) => `${n} ${n === 1 ? 'nota' : 'notes'} que no anava${n === 1 ? '' : 'n'} cap on marca la línia.`],
+    ].filter(([k]) => stats[k] > 0).sort((a, b) => stats[b[0]] - stats[a[0]]);
+    if (slips.length) gaps.push(slips[0][1](stats[slips[0][0]]));
+    return { gaps: gaps.slice(0, 3), focus };
   }
 
   function tipsFor(stats) {
@@ -5252,7 +5455,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         el('div', { className: 'play-hello-text' }, [
           el('div', { className: 'play-kicker', textContent: 'Improvisa' }),
           el('h2', { textContent: 'Inventa per sobre de la banda' }),
-          el('p', { className: 'play-note', textContent: 'Aquí no hi ha cartes ni estrelles: la banda toca una roda i tu hi poses el que vulguis. El teclat et pot marcar quines notes hi encaixen.' }),
+          el('p', { className: 'play-note', textContent: 'Aquí no hi ha cartes ni resultats: la banda toca una roda i tu hi poses el que vulguis. El teclat et pot marcar quines notes hi encaixen.' }),
           handsChip(),
         ]),
         el('div', { className: 'play-resume' }, [

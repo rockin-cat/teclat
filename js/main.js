@@ -23,6 +23,7 @@ import { createProgressionEditor } from './progression-editor.js';
 import { createKeyboard } from './keyboard.js';
 import { createLearn } from './learn.js';
 import { createPlay } from './play.js';
+import { levelBadge } from './levels.js';
 import {
   EXAM_PASS_STARS,
   HELP,
@@ -35,7 +36,6 @@ import {
   findTarget,
   nextCardInTier,
   renderMap,
-  starText,
   starsFor,
   targetLabel,
   trackKey,
@@ -995,7 +995,7 @@ function finishCardRound(round) {
       'good',
       `${cardLabel(target.card)} desbloquejada! ${HELP[used].mark}`,
       `Següent: ${cardLabel(next.card)}, a partir de la volta ${fromRound + 1}.` +
-        (used < 2 ? ` Per aconseguir ★, supera-la amb l'ajuda «${HELP[2].name}».` : ''),
+        (used < 2 ? ` Per tenir-la més per la mà, supera-la amb l'ajuda «${HELP[2].name}».` : ''),
     );
     showChallengeStatus();
     return;
@@ -1036,13 +1036,13 @@ function finishExamRound(round) {
   stop();
   showDialog(
     passed ? `Repte final ${tier.name.toLowerCase()} superat!` : `Repte final ${tier.name.toLowerCase()}: encara no`,
-    starText(stars),
+    stars,
     `${Math.round(ratio * 100)}% d'encerts (${hits} encerts, ${misses} errors). ` +
       (passed
         ? nextTier
           ? `S'ha obert la dificultat «${nextTier.name}».`
           : 'Has completat totes les dificultats d\'aquest nivell i compàs!'
-        : `Calen ${EXAM_PASS_STARS} estrelles (75% d'encerts). Pots repassar les cartes o tornar-ho a provar amb Espai.`),
+        : 'Per obrir la dificultat següent cal arribar a «A prop» (el 75% d\'encerts). Pots repassar les cartes o tornar-ho a provar amb Espai.'),
   );
 }
 
@@ -1089,8 +1089,10 @@ function showRoundBanner(kind, title, text) {
 
 function showDialog(title, stars, text) {
   ui.resultTitle.textContent = title;
-  ui.resultStars.textContent = stars;
-  ui.resultStars.hidden = !stars;
+  // The level of an exam («En procés», «A prop», «Ja ho tens!»); '' for other dialogs.
+  const scored = typeof stars === 'number';
+  ui.resultStars.replaceChildren(...(scored ? [levelBadge(stars)] : []));
+  ui.resultStars.hidden = !scored;
   ui.resultText.textContent = text;
   ui.result.hidden = false;
   ui.resultOk.focus();

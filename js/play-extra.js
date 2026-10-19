@@ -5,6 +5,7 @@ import { parseChord, pitchClass } from './theory.js';
 import { chordName, triadNoteNames, wheelChanges } from './missions.js';
 import { degreeOf } from './degrees.js';
 import { fingers, inversionVoicing, rootVoicing, voiceChain } from './voicing.js';
+import { LEVEL_NAMES, isDone, levelBadge, levelName, levelOf } from './levels.js';
 
 const el = (tag, props = {}, children = []) => {
   const node = Object.assign(document.createElement(tag), props);
@@ -40,33 +41,38 @@ export function keyName(midi, symbol) {
 // ---- Teacher view ----------------------------------------------------------------------
 
 /**
- * store: { students: { id: { name, stars, log: [{ m, p, s, r, tempo, t, reflect }] } } }
+ * store: { students: { id: { name, stars, log: [{ m, p, s, r, tempo, t, reflect, g }] } } }
+ * (stars: 0–3 per mission, shown as «En procés» / «A prop» / «Ja ho tens!»;
+ * g: what was missing in that try, in short sentences.)
  * path: the path shown on the map.
  */
 export function renderTeacher({ store, path, onDelete, onRename, button }) {
   const students = Object.entries(store.students);
   const missionTitle = new Map(path.missions.map((m) => [m.id, `${m.world.title} · ${m.title}`]));
   missionTitle.set('placement', 'Prova de nivell');
-  missionTitle.set('jam', 'Toca amb la banda (nivell més alt)');
-  const total = path.missions.length * 3;
+  missionTitle.set('jam', 'Toca amb la banda');
 
   const rows = students.map(([id, st]) => {
     const log = st.log.filter((e) => e.p === path.id);
-    const stars = path.missions.reduce((sum, m) => sum + (st.stars[m.id] ?? 0), 0);
+    // How many missions are at each level (never tried ones are left out).
+    const counts = [0, 0, 0];
+    for (const m of path.missions) if (st.stars[m.id] !== undefined) counts[levelOf(st.stars[m.id])]++;
     const tries = new Map();
     for (const e of log) tries.set(e.m, (tries.get(e.m) ?? 0) + 1);
     const hard = [...tries]
-      .filter(([m, n]) => n >= 3 && (st.stars[m] ?? 0) <= 1)
+      .filter(([m, n]) => n >= 3 && !isDone(st.stars[m]))
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([m, n]) => `${missionTitle.get(m) ?? m} (${n} intents)`);
     const reflections = new Map();
     for (const e of log) if (e.reflect) reflections.set(e.reflect, (reflections.get(e.reflect) ?? 0) + 1);
     const last = log.at(-1)?.t;
+    // The latest «what is missing» of a try that did not reach «Ja ho tens!».
+    const lastGap = [...log].reverse().find((e) => e.g?.length && levelOf(e.s) < 2);
     const worlds = path.worlds.map((w) => {
-      const got = w.missions.reduce((sum, m) => sum + (st.stars[m.id] ?? 0), 0);
-      const share = got / (w.missions.length * 3);
-      return el('span', { className: 'teacher-world', title: `${w.title}: ${got}/${w.missions.length * 3} ★` }, [
+      const got = w.missions.filter((m) => isDone(st.stars[m.id])).length;
+      const share = got / w.missions.length;
+      return el('span', { className: 'teacher-world', title: `${w.title}: ${got} de ${w.missions.length} missions a «A prop» o més` }, [
         el('i', { style: `width:${Math.round(share * 100)}%` }),
       ]);
     });
@@ -78,11 +84,17 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
           button('Esborra', () => onDelete(id), 'ghost small'),
         ]),
       ]),
-      el('td', { textContent: `${stars} / ${total}` }),
+      el('td', {}, counts.some(Boolean)
+        ? counts.map((n, k) => (n ? el('div', { className: 'teacher-level' }, [levelBadge(k === 2 ? 3 : k === 1 ? 2 : 0, { small: true }), ` ${n}`]) : null)).reverse()
+        : [document.createTextNode('—')]),
       el('td', {}, [el('div', { className: 'teacher-worlds' }, worlds)]),
       el('td', { textContent: String(log.length) }),
       el('td', { textContent: last ? day(last) : '—' }),
       el('td', { innerHTML: hard.length ? hard.join('<br>') : '—' }),
+      el('td', lastGap ? {} : { textContent: '—' }, lastGap ? [
+        el('small', { className: 'teacher-gap-where', textContent: `${missionTitle.get(lastGap.m) ?? lastGap.m} · ${day(lastGap.t)}` }),
+        el('div', { textContent: lastGap.g.join(' ') }),
+      ] : []),
       el('td', {
         innerHTML: reflections.size
           ? REFLECTIONS.filter((r) => reflections.has(r.id)).map((r) => `${r.label}: <b>${reflections.get(r.id)}</b>`).join('<br>')
@@ -100,13 +112,14 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
     detail.replaceChildren(
       log.length
         ? el('table', { className: 'teacher-table small' }, [
-            el('thead', {}, [el('tr', {}, ['Quan', 'Missió', '★', 'Compassos nets', 'Tempo', 'On ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
+            el('thead', {}, [el('tr', {}, ['Quan', 'Missió', 'Nivell', 'Compassos nets', 'Tempo', 'Què li ha faltat', 'On ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
             el('tbody', {}, log.map((e) => el('tr', {}, [
               el('td', { textContent: time(e.t) }),
               el('td', { textContent: missionTitle.get(e.m) ?? e.m }),
-              el('td', { textContent: e.m === 'placement' ? `${e.s}/4 proves` : '★'.repeat(e.s) + '☆'.repeat(Math.max(0, 3 - e.s)) }),
+              el('td', {}, [e.m === 'placement' ? document.createTextNode(`${e.s}/4 proves`) : levelBadge(e.s, { small: true })]),
               el('td', { textContent: e.m === 'placement' ? `comença a: ${missionTitle.get(e.start) ?? e.start}` : e.r === undefined || e.r === null ? '—' : `${Math.round(e.r * 100)}%` }),
               el('td', { textContent: e.tempo ?? '—' }),
+              el('td', { textContent: e.g?.length ? e.g.join(' ') : '—' }),
               el('td', { textContent: REFLECTIONS.find((r) => r.id === e.reflect)?.label ?? '—' }),
             ]))),
           ])
@@ -117,10 +130,10 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
   showDetail();
 
   const csv = () => {
-    const lines = [['alumne', 'camí', 'missió', 'estrelles', 'compassos nets', 'tempo', 'data', 'autoavaluació']];
+    const lines = [['alumne', 'camí', 'missió', 'nivell', 'compassos nets', 'tempo', 'data', 'què li ha faltat', 'autoavaluació']];
     for (const [, st] of students) {
       for (const e of st.log) {
-        lines.push([st.name, e.p, missionTitle.get(e.m) ?? e.m, e.s, e.r === undefined || e.r === null ? '' : Math.round(e.r * 100) + '%', e.tempo ?? '', new Date(e.t).toISOString(), REFLECTIONS.find((r) => r.id === e.reflect)?.label ?? '']);
+        lines.push([st.name, e.p, missionTitle.get(e.m) ?? e.m, e.m === 'placement' ? `${e.s}/4 proves` : levelName(e.s), e.r === undefined || e.r === null ? '' : Math.round(e.r * 100) + '%', e.tempo ?? '', new Date(e.t).toISOString(), e.g?.join(' ') ?? '', REFLECTIONS.find((r) => r.id === e.reflect)?.label ?? '']);
       }
     }
     const text = lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
@@ -133,11 +146,11 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
   return el('div', { className: 'play-world teacher' }, [
     el('div', { className: 'play-kicker', textContent: 'Vista del professor' }),
     el('h2', { textContent: `Progrés a ${path.title}` }),
-    el('p', { textContent: 'Tots els alumnes que han jugat en aquest ordinador. Les barres són els mons del camí; «Li costa» són missions amb 3 intents o més i poques estrelles.' }),
+    el('p', { textContent: `Tots els alumnes que han jugat en aquest ordinador. Nivell: quantes missions té a cada nivell (${LEVEL_NAMES.join(' · ')}). Les barres són els mons del camí (missions a «A prop» o més); «Li costa» són missions amb 3 intents o més que encara són «En procés»; «Què li falta» és el que ha faltat a l'últim intent que no ha arribat a «Ja ho tens!».` }),
     students.length
       ? el('div', { className: 'teacher-scroll' }, [
           el('table', { className: 'teacher-table' }, [
-            el('thead', {}, [el('tr', {}, ['Nom', 'Estrelles', 'Mons', 'Intents', 'Últim dia', 'Li costa', 'On diu que ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
+            el('thead', {}, [el('tr', {}, ['Nom', 'Nivell', 'Mons', 'Intents', 'Últim dia', 'Li costa', 'Què li falta', 'On diu que ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
             el('tbody', {}, rows),
           ]),
         ])

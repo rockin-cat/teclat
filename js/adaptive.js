@@ -48,7 +48,7 @@ export function skillsFor(kit) {
     { id: 'basic', stage: 4, label: 'Un acord a cada temps', icon: '♩' },
     { id: 'rests', stage: 5, label: 'Silencis', icon: '○' },
     { id: 'long', stage: 5, label: 'Notes llargues', icon: '━' },
-    { id: 'mix', stage: 6, label: 'Cartes seguides', icon: '★' },
+    { id: 'mix', stage: 6, label: 'Cartes seguides', icon: '◆' },
     { id: 'band', stage: 7, label: 'Amb la banda', icon: '♪♪' },
   ];
   if (kit.cards.medium?.length) skills.push({ id: 'medium', stage: 8, label: 'Cartes intermèdies', icon: '½' });

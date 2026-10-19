@@ -37,7 +37,7 @@ const SECTIONS = [
     html: `
       <ul>
         <li><b>Qui juga?</b> Cada alumne escriu el seu nom (o el tria de la llista). Diversos alumnes poden compartir ordinador: cadascú té el seu progrés. «No ets…? Canvia» (al peu del mapa) torna a la llista.</li>
-        <li>La primera vegada surten <b>5 pantalles de benvinguda</b>: la carta diu <i>quan</i> tocar, el teclat <i>quines</i> notes, primer s'escolta i després es toca, i les estrelles. «❓ Com es juga?» les torna a mostrar.</li>
+        <li>La primera vegada surten <b>5 pantalles de benvinguda</b>: la carta diu <i>quan</i> tocar, el teclat <i>quines</i> notes, primer s'escolta i després es toca, i com es diu on ets al final de cada missió («En procés», «A prop», «Ja ho tens!»). «❓ Com es juga?» les torna a mostrar.</li>
         <li>Després, <b>Amb quantes mans vols tocar?</b> (vegeu <a data-go="mans">Una mà o dues</a>).</li>
         <li>Finalment, <b>Per on comences?</b> «Comença pel principi» o la <b>🎯 prova de nivell</b>.</li>
       </ul>
@@ -58,7 +58,7 @@ const SECTIONS = [
     icon: '🎸',
     title: 'El camí (Juga)',
     html: `
-      <p>El mapa mostra una salutació, les estrelles, un botó gran <b>▶ Juga</b> amb la missió següent i els mons: l'actual obert, els acabats amb ✓ i els següents tancats amb 🔒. <b>Una estrella</b> obre la missió següent.</p>
+      <p>El mapa mostra una salutació, la fitxa <b>«Què sé fer»</b>, un botó gran <b>▶ Juga</b> amb la missió següent i els mons: l'actual obert, els acabats amb ✓ i els següents tancats amb 🔒. Cada missió feta porta el seu nivell: <b>En procés</b>, <b>A prop</b> o <b>Ja ho tens!</b>. La missió següent s'obre en cada intent que arriba al 60% de compassos nets (50% a la banda; als jocs on el joc espera, sempre que s'acaba), però una missió només compta com a feta a partir d'«A prop»: quan s'ha passat per tot, «▶ Juga» porta a les que encara són «En procés». Quan tot el camí principal és a «A prop» o més, el mapa i «Què sé fer» diuen: «Has acabat el camí. Ja pots portar-ho al teu grup: a partir d'ara, aquesta eina només la necessites per repassar alguna cosa concreta.» El nivell 2 queda com a opcional, per aprofundir.</p>
       <h4>Els sis mons</h4>
       <ol>
         <li><b>Llegeix les cartes</b>: lliçó i cartes sobre una sola nota amb la música.</li>
@@ -74,14 +74,14 @@ const SECTIONS = [
       <h4>Cartes difícils: les mans alternades</h4>
       <p>Les cartes amb el pols partit en quatre només es fan servir <b>amb dues mans</b>: amb una sola mà són massa subdivisió i acaben tensant el braç. Aquestes cartes es dibuixen en <b>una sola fila</b> amb els colors intercalats: cada tros <b style="color:#3fb2f5">blau</b> el toca la dreta i cada tros <b style="color:#ff8a2a">taronja</b>, l'esquerra, una darrere l'altra dins del mateix temps (com el patró de merengue). Amb una sola mà, el camí intel·ligent s'atura a les cartes intermèdies.</p>
 
-      <h4>El nivell, sempre a la vista</h4>
-      <p>Durant les missions, a la barra de dalt hi ha <b>«El teu nivell»</b> (de 0 a 6) amb el nom del nivell. Clicant-lo s'obre l'escala sencera: què es podria fer amb el grup a cada nivell, quins ja estan fets i <b>què falta</b> per al següent. La prova de nivell també hi compta: si et fa començar més endavant, el nivell ja surt pujat.</p>
+      <h4>«Què sé fer», sempre a la vista</h4>
+      <p>Durant les missions, a la barra de dalt hi ha <b>«Què sé fer»</b> amb el que ja es pot fer amb el grup. Clicant-lo s'obre la llista sencera: què ja està fet i <b>què falta</b>. La prova de nivell també hi compta: si et fa començar més endavant, la llista ja surt avançada.</p>
 
       <h4>🃏 Estudia una carta</h4>
-      <p>Sota les missions de cada món hi ha totes les seves <b>cartes</b>. Clicant-ne una s'obre una pràctica lliure d'aquella carta sola, amb les tecles pintades i sense guardar estrelles: serveix per treballar un contorn melòdic o un ritme concret tantes vegades com calgui.</p>
+      <p>Sota les missions de cada món hi ha totes les seves <b>cartes</b>. Clicant-ne una s'obre una pràctica lliure d'aquella carta sola, amb les tecles pintades i sense guardar resultats: serveix per treballar un contorn melòdic o un ritme concret tantes vegades com calgui.</p>
 
       <h4>Els suports visuals es retiren sols</h4>
-      <p>A mesura que puja el <b>nivell de banda</b>, el joc treu ajudes: al nivell 2 el teclat de la pantalla <b>es fa més petit</b>; a partir del nivell 3 (de memòria) la <b>imatge del teclat</b> desapareix a les missions que no pinten tecles, i les cartes es fan més grosses. Sempre es pot recuperar el teclat amb el botó <b>🎹</b> de la barra de dalt. Les cartes de la roda es veuen <b>sempre totes</b> (una per compàs): mentre sona la música, <b>les que ja s'han tocat s'apaguen</b> i la vista va cap endavant, com quan es llegeix una partitura; en acabar, tornen a encendre's totes amb les marques.</p>
+      <p>A mesura que creix «Què sé fer», el joc treu ajudes: amb els <i>canvis fluids</i> el teclat de la pantalla <b>es fa més petit</b>; a partir dels <i>patrons amb les cartes</i> la <b>imatge del teclat</b> desapareix a les missions que no pinten tecles, i les cartes es fan més grosses. Sempre es pot recuperar el teclat amb el botó <b>🎹</b> de la barra de dalt. Les cartes de la roda es veuen <b>sempre totes</b> (una per compàs): mentre sona la música, <b>les que ja s'han tocat s'apaguen</b> i la vista va cap endavant, com quan es llegeix una partitura; en acabar, tornen a encendre's totes amb les marques.</p>
 
       <h4>Les lliçons són demostracions</h4>
       <p>Cada pantalla d'una lliçó mostra la carta i, de seguida, <b>el piano la toca</b> amb la pilota a sobre, en bucle, mentre el text explica què s'hi veu. Amb cartes de melodia, les línies llargues sonen llargues i les planes són una sola nota mantinguda. A les missions amb <b>diverses cartes diferents</b> no es fa escoltar només la primera: s'hi comença directament, i «♪ Primer escolta-les totes» (o la demostració que torna sola quan un intent no surt) fa que el piano toqui <b>totes les cartes</b> tal com s'han de tocar, a les mateixes caselles. Les files que es toquen dues vegades porten els <b>signes de repetició</b> de la partitura. La banda <b>canvia d'estil</b> de missió en missió al camí ROCKIN i d'una prova a l'altra a la prova de nivell.</p>
@@ -98,9 +98,9 @@ const SECTIONS = [
       <h4>Els estils de la base</h4>
       <p>N'hi ha <b>tretze</b> més el metrònom: rock/pop, blues shuffle, balada, swing, bossa nova, funk, reggaeton, reggae, rumba catalana i, nous, <b>ska</b>, <b>cúmbia</b>, <b>hip-hop</b> i <b>vals</b> (aquest, pensat per al 3/4). Cada estil varia cada dos compassos (obertures de charles, notes fantasma, el baix que puja a la cinquena) i les intensitats tenen un petit moviment perquè no soni de màquina.</p>
 
-      <h4>Nivells de banda: què podries fer amb els companys</h4>
-      <p>Al mapa de Juga hi ha una fitxa que tradueix el progrés en una cosa concreta: <b>què es podria fer ara mateix tocant amb un grup</b>. Puja sola quan se supera una missió del tipus corresponent i, quan puja, ho diu a la pantalla de resultats.</p>
-      <ol start="0">
+      <h4>«Què sé fer»: què podries fer amb els companys</h4>
+      <p>Al mapa de Juga hi ha la fitxa <b>«Què sé fer»</b>, que tradueix el progrés en una cosa concreta: <b>què es podria fer ara mateix tocant amb un grup</b>. S'hi afegeix una línia quan es passa una missió del tipus corresponent, i la pantalla de resultats ho diu. És l'únic resum de progrés: no hi ha punts ni classificacions.</p>
+      <ol>
         <li><b>Comences</b>: trobar les notes al teclat.</li>
         <li><b>Acords, amb temps per pensar</b>: fer tots els acords si els companys t'esperen entre canvi i canvi.</li>
         <li><b>Canvis fluids</b>: seguir la roda sense que ningú t'esperi.</li>
@@ -120,8 +120,8 @@ const SECTIONS = [
       <p>A la barra de cada missió hi ha sempre <b>↩ Anterior</b> i <b>⏭ Salta</b>: no cal superar una missió per passar endavant o tornar enrere.</p>
       <p>Quan escoltes l'exemple, l'<b>últim compàs de l'exemple ja fa de compte enrere</b> (hi sona el clic i diu «Ara tu!»): no s'afegeix cap compàs extra.</p>
 
-      <h4>⭐ Nivell 2: arpegis i girs melòdics</h4>
-      <p>Quan s'acaba el camí (també el de cada cançó) s'obre el nivell 2, amb les <b>cartes melòdiques</b>: punts units per una línia; cada punt és una nota de l'acord, tocada d'una en una. Si la línia puja, la nota és més aguda; si baixa, més greu; a la mateixa altura, la mateixa nota. Qualsevol nota de l'acord val si segueix la línia: es pot començar per qualsevol nota (qualsevol inversió). Les cartes melòdiques no marquen ritme; al joc, perquè es puguin escoltar i tocar amb la banda, les notes van sobre un pols constant: 2 notes, una cada mig compàs; 3–4 notes, una per temps; 5–8 notes, una per mig temps (l'última sona fins al final del compàs). La pilota bota sempre almenys a cada temps.</p>
+      <h4>Nivell 2, per aprofundir: arpegis i girs melòdics</h4>
+      <p>Quan s'acaba el camí (també el de cada cançó) s'obre el nivell 2, opcional, amb les <b>cartes melòdiques</b>: punts units per una línia; cada punt és una nota de l'acord, tocada d'una en una. Si la línia puja, la nota és més aguda; si baixa, més greu; a la mateixa altura, la mateixa nota. Qualsevol nota de l'acord val si segueix la línia: es pot començar per qualsevol nota (qualsevol inversió). Les cartes melòdiques no marquen ritme; al joc, perquè es puguin escoltar i tocar amb la banda, les notes van sobre un pols constant: 2 notes, una cada mig compàs; 3–4 notes, una per temps; 5–8 notes, una per mig temps (l'última sona fins al final del compàs). La pilota bota sempre almenys a cada temps.</p>
       <ol start="7">
         <li><b>Arpegis</b>: lliçó de les cartes de línia, <b>la roda nota a nota</b> (fonamental, tercera i quinta, primer amb la tecla que toca pintada i després de memòria; el joc espera), cartes de <b>dues notes</b> (amunt-avall, avall-amunt, repetides), la primera de tres notes i l'objectiu.</li>
         <li><b>Girs melòdics</b> (contorn melòdic): cartes de <b>fletxes</b> que el joc dibuixa, una per temps, i que es llegeixen amb l'<b>escala</b> de la tonalitat, no només amb l'acord: <b>●</b> comença en una nota de l'acord (la que es vulgui), <b>↑ ↓</b> la nota següent o anterior de l'escala, <b>→</b> la mateixa, <b>⇈ ⇊</b> salta'n una (una tercera), <b>○</b> silenci. El jutge compara cada nota amb l'anterior: «fora de l'escala», «no és de l'acord» o «era ↑, ha sonat ⇈» són els errors amb nom. Amb ajuda, el teclat pinta les notes de l'acord per començar i després <b>la tecla que demana la fletxa</b>. Lliçó amb demostracions i missions pels girs del document del joc: dues notes (puja; puja i baixa; puja, baixa, puja; baixa i torna), tres (puja; puja i baixa; baixa i puja; amb salt; salt i pas), l'objectiu i la banda. Les cartes de melodia (punts i línies) queden per als <b>arpegis</b>, que sí que són notes de l'acord.</li>
@@ -130,7 +130,7 @@ const SECTIONS = [
       <h4>Tipus de missions</h4>
       <ul>
         <li><b>Lliçó</b>: pantalles amb una carta d'exemple (es pot escoltar).</li>
-        <li><b>Acord nou</b>: mirar-lo i escoltar-lo, construir-lo comptant tecles des de la fonamental (4 i 3 per als majors, 3 i 4 per als menors; els números apareixen a les tecles), i tocar-lo pintat i de memòria. La fonamental ha d'anar a baix. <b>Pistes quan s'equivoca</b>: mentre el construeix, cada nota equivocada diu quina ha tocat i, a la segona errada, pinta la fonamental; els salts es compten amb números a les tecles. De memòria, cada errada recorda les tres notes (p. ex. «Sol – Si – Re») i, a la segona, es pinten les tecles (compta com a pista: 2 estrelles). També hi ha el botó «Pista».</li>
+        <li><b>Acord nou</b>: mirar-lo i escoltar-lo, construir-lo comptant tecles des de la fonamental (4 i 3 per als majors, 3 i 4 per als menors; els números apareixen a les tecles), i tocar-lo pintat i de memòria. La fonamental ha d'anar a baix. <b>Pistes quan s'equivoca</b>: mentre el construeix, cada nota equivocada diu quina ha tocat i, a la segona errada, pinta la fonamental; els salts es compten amb números a les tecles. De memòria, cada errada recorda les tres notes (p. ex. «Sol – Si – Re») i, a la segona, es pinten les tecles (compta com a pista: queda «A prop»). També hi ha el botó «Pista».</li>
         <li><b>Canvi</b>: un <b>diagrama</b> amb fletxes (vegeu <a data-go="canvis">Canvis d'acord</a>) i una animació al teclat; després, anar i tornar entre els dos acords. <b>El joc espera</b> fins que l'acord és correcte.</li>
         <li><b>Pas a pas</b>: la roda dues vegades, la primera amb les tecles pintades i la segona de memòria. El joc espera a cada acord; només es pinta l'acord que toca en aquell moment. Hi ha un botó «Pista».</li>
         <li><b>Ritme, Objectiu, Cançó, Estructura</b>: amb música. Primer el piano toca la roda (cartes amb una <b>mà ✋</b>: escoltar sense tocar), després surt «Ara tu!» amb el compte, i es toca. La pilota bota de rodona en rodona.</li>
@@ -138,11 +138,12 @@ const SECTIONS = [
         <li><b>Banda</b>: la música no s'atura i no hi ha exemple. Si t'equivoques, tornes a entrar a la carta següent.</li>
         <li><b>Inversions</b>: construir les tres posicions d'un acord.</li>
       </ul>
-      <h4>Estrelles i dificultat</h4>
+      <h4>Nivell d'assoliment i dificultat</h4>
       <ul>
-        <li>Missions amb música: 3 estrelles si tots els compassos són nets, 2 amb el 85%, 1 amb el 75% (Banda: 90%, 75% i 60%).</li>
-        <li><b>Tempo adaptatiu</b>: si surten menys de la meitat de compassos nets, el següent intent va 8 pulsacions més lent (fins a −24); un intent perfecte el torna a pujar. Amb el tempo rebaixat, com a molt 2 estrelles.</li>
-        <li>Missions on el joc espera: 3 estrelles sense errades, 2 amb una o dues errades o pistes, 1 amb més.</li>
+        <li>Missions amb música: <b>Ja ho tens!</b> amb el 95% de compassos nets o més, <b>A prop</b> amb el 80%, i <b>En procés</b> per sota; amb el 60% ja s'obre la missió següent (Banda: 85%, 70% i 50%).</li>
+        <li><b>Tempo adaptatiu</b>: si surten menys de la meitat de compassos nets, el següent intent va 8 pulsacions més lent (fins a −24); un intent perfecte el torna a pujar. Amb el tempo rebaixat, com a molt «A prop».</li>
+        <li>Missions on el joc espera: «Ja ho tens!» sense errades, «A prop» amb una o dues errades o pistes, «En procés» amb més (la següent s'obre igualment).</li>
+        <li>La <b>pantalla de resultat</b> té tres parts: el nivell amb una línia de dades (p. ex. «12 de 16 compassos nets»), <b>què t'ha faltat</b> (el canvi o l'acord que més falla, si vas avançat o endarrerit, la relliscada més freqüent) i <b>què pots fer</b> (consells i, si cal, una recomanació: després de dos intents seguits «En procés», tornar a la missió anterior que treballa just això, amb un botó; amb «Ja ho tens!», el pas següent, o portar-ho al grup si ja estava fet).</li>
         <li>Després dels objectius, cançons i banda, surt una pregunta curta: <b>on has perdut el fil</b> (canvis, ritme, notes, el fil, cap problema). Ho veureu a la zona del professorat.</li>
       </ul>
       <h4>Les marques de les cartes</h4>
@@ -176,7 +177,7 @@ const SECTIONS = [
         <li>A «Llegeix les cartes», les dues mans toquen la fonamental.</li>
         <li>Construir acords, els canvis i les inversions s'ensenyen amb la mà dreta.</li>
         <li>Amb l'esquerra al baix, al final hi ha un món més, <b>Cadascuna el seu ritme</b>, amb cartes on cada mà té un ritme diferent (una i una, esquerra primer, rock, reggae, balada), i un altre, <b>Dues mans: ritmes difícils</b>, amb temps partits: primer a una sola mà (contratemps, corxeres, pop, galop, bossa, funk) i després a <b>les dues mans amb ritmes diferents</b> (contratemps creuats, funk, galop i rumba creuats). A «Toca amb la banda», amb l'esquerra al baix, els nivells intermedis i difícils fan servir aquestes cartes.</li>
-        <li>Les estrelles es guarden a part per a cada manera de tocar.</li>
+        <li>Els resultats es guarden a part per a cada manera de tocar.</li>
       </ul>`,
   },
   {
@@ -204,8 +205,8 @@ const SECTIONS = [
       <p>Les cartes de ritme es van complicant: quan les fàcils surten bé, passa a les intermèdies i després a les difícils. Cada vegada que torna a un aprenentatge fa servir cartes diferents.</p>
       <h4>Com decideix</h4>
       <ul>
-        <li>Comença per baix i <b>salta ràpid</b>: cada repte ben fet puja una etapa, i una ratxa de reptes bons en puja <b>dues o tres de cop</b>. A la barra de dalt hi diu sempre en quin <b>nivell</b> està (per exemple «Nivell 5/12 · Silencis i notes llargues») i, quan puja, el resultat ho diu.</li>
-        <li>Per sota del nivell on ja és, <b>no torna a demanar</b> el que ja sap: només hi torna si una cosa falla clarament.</li>
+        <li>Comença per baix i <b>salta ràpid</b>: cada repte ben fet puja una etapa, i una ratxa de reptes bons en puja <b>dues o tres de cop</b>. A la barra de dalt hi diu sempre en quina <b>etapa</b> està (per exemple «Etapa 5 de 12 · Silencis i notes llargues») i, quan canvia, el resultat ho diu.</li>
+        <li>Per sota de l'etapa on ja és, <b>no torna a demanar</b> el que ja sap: només hi torna si una cosa falla clarament.</li>
         <li>Si un repte d'una etapa alta surt bé, dona per sabut el que hi ha per sota (surt amb vora de punts: «deduït»).</li>
         <li>Si surt malament, torna a provar el que havia deduït de les dues etapes anteriors.</li>
         <li>Amb música, detecta en quin acord o canvi hi ha hagut notes equivocades i ho marca per practicar.</li>
@@ -219,7 +220,7 @@ const SECTIONS = [
         <li>El mapa «Què saps»: <b style="color:#3ddc84">verd</b> ho sap, verd de punts deduït, <b style="color:#ffa24c">taronja</b> cal practicar, gris per provar. Clicant qualsevol aprenentatge es practica.</li>
         <li>Després de cada repte: «Següent repte →» i una línia amb el que ha canviat.</li>
         <li>«↺ Torna a començar» esborra el que el camí sap de cada persona.</li>
-        <li>No dona estrelles. Una mà i dues mans es porten a part.</li>
+        <li>No dona nivells d'assoliment. Una mà i dues mans es porten a part.</li>
       </ul>`,
   },
   {
@@ -232,7 +233,7 @@ const SECTIONS = [
         <li><b>Troba la nota</b>: tecles blanques amb nom, sense nom i tecles negres. Després de dues errades es pinten.</li>
         <li><b>Salta tecles</b>: des d'una tecla groga, saltar 1–4 tecles (els números apareixen un a un).</li>
         <li><b>Construeix</b>: acords majors, menors i barrejats. Guiat (fonamental → primer salt → segon salt → les tres alhora) o sol, amb el botó «Ajuda pas a pas».</li>
-        <li><b>Contra rellotge</b>: tants acords com es pugui en 60 segons (3, 6 i 10 per a 1, 2 i 3 estrelles).</li>
+        <li><b>Contra rellotge</b>: tants acords com es pugui en 60 segons (6 per a «A prop», 10 per a «Ja ho tens!»).</li>
       </ul>`,
   },
   {
@@ -243,7 +244,7 @@ const SECTIONS = [
       <ul>
         <li><b>Cançons del llibre ROCKIN</b>: Corren, De Bonesh, Diamonds, En la tormenta, Flor de primavera, Me gustas tú, Sense tu, Som ocells i Urras, amb la tonalitat, l'estil, el tempo i l'estructura del llibre (sense lletres). A Sense tu, la tornada canvia d'acord cada dos temps al llibre; al joc cada acord dura un compàs.</li>
         <li><b>Cançons conegudes</b>: un clic crea el camí d'aquella progressió.</li>
-        <li><b>📚 Biblioteca compartida</b>: les cançons que el professorat comparteix des del <a href="https://rockin-cat.github.io/Generador-diagrames/" target="_blank" rel="noopener">Generador de diagrames</a>, amb el mateix codi del professorat (es demana un cop i queda desat al navegador). Es poden filtrar per nivell (0, 1, 2) i cercar per títol, artista o qui l'ha compartida. «Obrir» crea el camí amb els acords de cada part, l'ordre de l'estructura, la tonalitat, l'estil i el tempo de la fitxa. Als compassos amb dos acords s'hi toca el que dura més; els acords menors escrits amb «-» i els power chords (D5) es llegeixen igualment. Tornar a obrir una cançó actualitza el camí sense perdre les estrelles.</li>
+        <li><b>📚 Biblioteca compartida</b>: les cançons que el professorat comparteix des del <a href="https://rockin-cat.github.io/Generador-diagrames/" target="_blank" rel="noopener">Generador de diagrames</a>, amb el mateix codi del professorat (es demana un cop i queda desat al navegador). Es poden filtrar per nivell (0, 1, 2) i cercar per títol, artista o qui l'ha compartida. «Obrir» crea el camí amb els acords de cada part, l'ordre de l'estructura, la tonalitat, l'estil i el tempo de la fitxa. Als compassos amb dos acords s'hi toca el que dura més; els acords menors escrits amb «-» i els power chords (D5) es llegeixen igualment. Tornar a obrir una cançó actualitza el camí sense perdre el que s'hi ha fet.</li>
         <li><b>+ Crea un camí</b>: nom, roda d'acords (escrita o d'una cançó coneguda), tornada opcional, transport a una altra tonalitat, compàs (4/4, 3/4, 6/8, 12/8), estil de la base, tempo i si comença llegint cartes. Els camins creats surten com a targetes amb ✕ per esborrar-los.</li>
       </ul>
       <h4>El mapa d'una cançó</h4>
@@ -262,12 +263,12 @@ const SECTIONS = [
       <p>Porta de la portada per als alumnes: el lloc on es posa tot a prova. L'alumne tria una cançó (la roda ROCKIN, les del llibre o els camins creats) i toca amb la banda <b>sense parar</b>.</p>
       <ul>
         <li>Es toca per <b>tandes</b> de quatre cartes (una per volta de la roda). Entre tanda i tanda hi ha 4 segons per mirar les marques; després la banda torna a començar sola.</li>
-        <li>Amb el <b>85%</b> de compassos nets es puja de nivell; per sota del <b>60%</b> es baixa.</li>
-        <li>Nivells: 1–2 cartes fàcils (primer més lent), 3–5 cartes intermèdies (més lent, normal, més ràpid), 6–8 cartes difícils (fins a «Mestre de la banda»). El tempo parteix del de la cançó (entre 60 i 126).</li>
-        <li>Les cartes de cada tanda són a l'atzar dins del nivell.</li>
+        <li>Amb el <b>85%</b> de compassos nets la tanda següent és més difícil; per sota del <b>60%</b>, més fàcil.</li>
+        <li>Dificultats: cartes fàcils (primer més lent), cartes intermèdies (més lent, normal, més ràpid) i cartes difícils (normal, més ràpid i molt ràpid). El tempo parteix del de la cançó (entre 60 i 126).</li>
+        <li>Les cartes de cada tanda són a l'atzar dins de la dificultat.</li>
         <li>Es toca amb una mà o dues, segons el que s'hagi triat.</li>
-        <li>El joc recorda per a cada cançó el nivell on es va quedar (la propera vegada hi comença) i el <b>rècord</b>. «■ Atura» mostra el resum de la sessió.</li>
-        <li>A la zona del professorat, a la taula del camí ROCKIN (o de la cançó), surt com «Toca amb la banda (nivell més alt)».</li>
+        <li>El joc recorda per a cada cançó la dificultat on es va quedar (la propera vegada hi comença). No es guarden marques ni punts acumulats: «■ Atura» mostra el resultat de la sessió (nivell, què ha faltat i què es pot fer).</li>
+        <li>A la zona del professorat, a la taula del camí ROCKIN (o de la cançó), surt com «Toca amb la banda».</li>
       </ul>`,
   },
   {
@@ -275,7 +276,7 @@ const SECTIONS = [
     icon: '✨',
     title: 'Improvisa',
     html: `
-      <p>Quarta porta de la portada. Aquí no hi ha cartes, ni estrelles, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
+      <p>Quarta porta de la portada. Aquí no hi ha cartes, ni nivells, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
       <h4>Tres maneres</h4>
       <ul>
         <li><b>Roda oberta</b>: la banda no para; s'hi toca el que es vulgui fins que es prem <b>Prou, ja he acabat</b>.</li>
@@ -292,7 +293,7 @@ const SECTIONS = [
         <li><b>Res marcat</b>: el teclat no diu res i es toca d'oïda.</li>
       </ul>
       <h4>Què diu al final</h4>
-      <p>Un resum en paraules, mai una nota ni estrelles: quantes notes s'han tocat i quantes diferents, quina part eren de l'acord que sonava, si el ritme ha estat variat i si s'ha deixat algún compàs de silenci, amb una idea per a la pròxima vegada. La roda pot ser la de ROCKIN o la de qualsevol cançó del llibre o pròpia, amb el seu estil i el seu tempo.</p>`,
+      <p>Un resum en paraules, mai una nota ni un nivell: quantes notes s'han tocat i quantes diferents, quina part eren de l'acord que sonava, si el ritme ha estat variat i si s'ha deixat algún compàs de silenci, amb una idea per a la pròxima vegada. La roda pot ser la de ROCKIN o la de qualsevol cançó del llibre o pròpia, amb el seu estil i el seu tempo.</p>`,
   },
   {
     id: 'colors',
@@ -339,7 +340,7 @@ const SECTIONS = [
     html: `
       <p>Al peu del mapa de Juga: <b>⚙ Professorat</b>.</p>
       <ul>
-        <li><b>🔓 Mode professor</b>: un perfil «Professor/a» amb tot obert (camí, taller i cançons) que no guarda estrelles ni intents. Se'n surt amb «Surt del mode professor».</li>
+        <li><b>🔓 Mode professor</b>: un perfil «Professor/a» amb tot obert (camí, taller i cançons) que no guarda resultats ni intents. Se'n surt amb «Surt del mode professor».</li>
         <li><b>Fitxa per imprimir</b>: una pàgina A4 horitzontal amb la roda, l'estructura, cada acord en un tecladet amb els dits, els canvis amb diagrames, les inversions, les cartes i una llista per revisar abans de tocar en grup. La de cada cançó és al seu mapa.</li>
         <li><b>Velocitat</b> (lenta, normal, ràpida): el tempo de les missions; els tempos de les cançons s'hi ajusten.</li>
         <li><b>Metrònom</b> mentre toquen.</li>
@@ -348,7 +349,7 @@ const SECTIONS = [
         <li><b>Números de dit a les tecles pintades</b>: apagat per defecte (els números es poden confondre amb els graus). Si s'encén, surt una <b>taula de digitacions</b> amb tots els acords del joc: cada acord es pot deixar en automàtic (el número gris) o escriure-hi la digitació que vulgueu, de la nota més greu a la més aguda i per a la <b>mà dreta</b> (per exemple Si♭ = 1-2-4); l'esquerra la fa a l'inrevés.</li>
         <li><b>🎹 El meu teclat</b>: perquè el teclat de la pantalla sigui idèntic al físic, com en una app de piano. Tria la mida (25, 32, 37, 49, 61, 76 o 88 tecles) o prem <b>Detecta'l tocant</b>: toca la tecla més greu i després la més aguda, i el joc en pren nota. Es desa al navegador (és una cosa de l'ordinador, no de l'alumne). «Automàtic» torna a ensenyar les tecles que caben a la pantalla. Amb teclats petits, les tecles pintades que quedin fora no es veuen, però les notes compten igual en qualsevol octava.</li>
         <li><b>Camí intel·ligent</b>: què sap cada persona, què ha de practicar i quants reptes ha fet.</li>
-        <li><b>Progrés</b> de cada camí (una taula per camí): estrelles, barra per món, intents, últim dia, missions que costen (3 intents o més amb 1 estrella o menys), què diuen a l'autoavaluació i el resultat de la prova de nivell. Clicant un alumne es veuen els seus últims 20 intents. Es pot canviar el nom, esborrar-lo i <b>descarregar un CSV</b>.</li>
+        <li><b>Progrés</b> de cada camí (una taula per camí): quantes missions té a cada nivell (Ja ho tens! · A prop · En procés), barra per món, intents, últim dia, missions que costen (3 intents o més i encara «En procés»), <b>què li falta</b> (el que ha faltat a l'últim intent que no ha arribat a «Ja ho tens!»), què diuen a l'autoavaluació i el resultat de la prova de nivell. Clicant un alumne es veuen els seus últims 20 intents. Es pot canviar el nom, esborrar-lo i <b>descarregar un CSV</b>.</li>
       </ul>
       <h4>On es guarden les dades</h4>
       <ul>
