@@ -207,7 +207,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   const helpBoost = new Map(); // mission id -> the keys light up again, after a missed try
   const badTries = new Map(); // mission id -> tries in a row that went badly (the demo comes back)
   let pathId = storage.get('rockin.play.path') ?? null; // song path chosen in "Cançons"
-  let section = 'juga'; // juga | cancons | banda
+  let section = 'juga'; // juga | cancons | improvisa
   const homeScreen = () => (section === 'cancons' ? 'songs' : section === 'banda' ? 'jam' : section === 'improvisa' ? 'improv' : 'map');
   let path = ROCKIN_PATH;
   let screen = 'map'; // map | creator | teacher | who | welcome
@@ -5861,6 +5861,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
 
   return {
     show(next = 'juga') {
+      if (next === 'banda') next = 'juga'; // «Toca amb la banda» retirat: es toca amb els companys
       root.hidden = false;
       document.body.classList.add('play-theme');
       if (next !== section) {

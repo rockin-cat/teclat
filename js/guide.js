@@ -26,7 +26,6 @@ const SECTIONS = [
       <ul>
         <li><b>Juga</b>: el joc guiat per als alumnes (camí, camí intel·ligent i taller d'acords).</li>
         <li><b>Cançons</b>: camins per a cada cançó (les del llibre ROCKIN, cançons conegudes i les que creeu).</li>
-        <li><b>Toca amb la banda</b>: per als alumnes, posar-ho tot a prova tocant sense parar; la dificultat s'adapta.</li>
         <li><b>Sessió</b>: per treballar a classe amb qualsevol progressió i totes les opcions.</li>
       </ul>`,
   },
@@ -176,7 +175,7 @@ const SECTIONS = [
         <li>Cada mà es corregeix per separat: les marques de la dreta surten a sobre de la fila blava i les de l'esquerra, a sota de la taronja. Un compàs només és net si ho són les dues mans.</li>
         <li>A «Llegeix les cartes», les dues mans toquen la fonamental.</li>
         <li>Construir acords, els canvis i les inversions s'ensenyen amb la mà dreta.</li>
-        <li>Amb l'esquerra al baix, al final hi ha un món més, <b>Cadascuna el seu ritme</b>, amb cartes on cada mà té un ritme diferent (una i una, esquerra primer, rock, reggae, balada), i un altre, <b>Dues mans: ritmes difícils</b>, amb temps partits: primer a una sola mà (contratemps, corxeres, pop, galop, bossa, funk) i després a <b>les dues mans amb ritmes diferents</b> (contratemps creuats, funk, galop i rumba creuats). A «Toca amb la banda», amb l'esquerra al baix, els nivells intermedis i difícils fan servir aquestes cartes.</li>
+        <li>Amb l'esquerra al baix, al final hi ha un món més, <b>Cadascuna el seu ritme</b>, amb cartes on cada mà té un ritme diferent (una i una, esquerra primer, rock, reggae, balada), i un altre, <b>Dues mans: ritmes difícils</b>, amb temps partits: primer a una sola mà (contratemps, corxeres, pop, galop, bossa, funk) i després a <b>les dues mans amb ritmes diferents</b> (contratemps creuats, funk, galop i rumba creuats).</li>
         <li>Els resultats es guarden a part per a cada manera de tocar.</li>
       </ul>`,
   },
@@ -256,27 +255,11 @@ const SECTIONS = [
       </ul>`,
   },
   {
-    id: 'banda',
-    icon: '🎤',
-    title: 'Toca amb la banda',
-    html: `
-      <p>Porta de la portada per als alumnes: el lloc on es posa tot a prova. L'alumne tria una cançó (la roda ROCKIN, les del llibre o els camins creats) i toca amb la banda <b>sense parar</b>.</p>
-      <ul>
-        <li>Es toca per <b>tandes</b> de quatre cartes (una per volta de la roda). Entre tanda i tanda hi ha 4 segons per mirar les marques; després la banda torna a començar sola.</li>
-        <li>Amb el <b>85%</b> de compassos nets la tanda següent és més difícil; per sota del <b>60%</b>, més fàcil.</li>
-        <li>Dificultats: cartes fàcils (primer més lent), cartes intermèdies (més lent, normal, més ràpid) i cartes difícils (normal, més ràpid i molt ràpid). El tempo parteix del de la cançó (entre 60 i 126).</li>
-        <li>Les cartes de cada tanda són a l'atzar dins de la dificultat.</li>
-        <li>Es toca amb una mà o dues, segons el que s'hagi triat.</li>
-        <li>El joc recorda per a cada cançó la dificultat on es va quedar (la propera vegada hi comença). No es guarden marques ni punts acumulats: «■ Atura» mostra el resultat de la sessió (nivell, què ha faltat i què es pot fer).</li>
-        <li>A la zona del professorat, a la taula del camí ROCKIN (o de la cançó), surt com «Toca amb la banda».</li>
-      </ul>`,
-  },
-  {
     id: 'improvisa',
     icon: '✨',
     title: 'Improvisa',
     html: `
-      <p>Quarta porta de la portada. Aquí no hi ha cartes, ni nivells, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
+      <p>Porta de la portada. Aquí no hi ha cartes, ni nivells, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
       <h4>Tres maneres</h4>
       <ul>
         <li><b>Roda oberta</b>: la banda no para; s'hi toca el que es vulgui fins que es prem <b>Prou, ja he acabat</b>.</li>
