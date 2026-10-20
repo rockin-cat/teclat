@@ -6,6 +6,7 @@ import { chordName, triadNoteNames, wheelChanges } from './missions.js';
 import { degreeOf } from './degrees.js';
 import { fingers, inversionVoicing, rootVoicing, voiceChain } from './voicing.js';
 import { LEVEL_NAMES, isDone, levelBadge, levelName, levelOf } from './levels.js';
+import { mainObservation } from './choices.js';
 
 const el = (tag, props = {}, children = []) => {
   const node = Object.assign(document.createElement(tag), props);
@@ -95,6 +96,7 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
         el('small', { className: 'teacher-gap-where', textContent: `${missionTitle.get(lastGap.m) ?? lastGap.m} · ${day(lastGap.t)}` }),
         el('div', { textContent: lastGap.g.join(' ') }),
       ] : []),
+      el('td', { className: 'teacher-choices', textContent: mainObservation((st.choices ?? []).filter((c) => c.p === path.id)) || '—' }),
       el('td', {
         innerHTML: reflections.size
           ? REFLECTIONS.filter((r) => reflections.has(r.id)).map((r) => `${r.label}: <b>${reflections.get(r.id)}</b>`).join('<br>')
@@ -146,11 +148,11 @@ export function renderTeacher({ store, path, onDelete, onRename, button }) {
   return el('div', { className: 'play-world teacher' }, [
     el('div', { className: 'play-kicker', textContent: 'Vista del professor' }),
     el('h2', { textContent: `Progrés a ${path.title}` }),
-    el('p', { textContent: `Tots els alumnes que han jugat en aquest ordinador. Nivell: quantes missions té a cada nivell (${LEVEL_NAMES.join(' · ')}). Les barres són els mons del camí (missions a «A prop» o més); «Li costa» són missions amb 3 intents o més que encara són «En procés»; «Què li falta» és el que ha faltat a l'últim intent que no ha arribat a «Ja ho tens!».` }),
+    el('p', { textContent: `Tots els alumnes que han jugat en aquest ordinador. Nivell: quantes missions té a cada nivell (${LEVEL_NAMES.join(' · ')}). Les barres són els mons del camí (missions a «A prop» o més); «Li costa» són missions amb 3 intents o més que encara són «En procés»; «Què li falta» és el que ha faltat a l'últim intent que no ha arribat a «Ja ho tens!»; «Com tria» és l'observació principal de «Com tries el teu camí»: si les tries que fa després de cada resultat li funcionen.` }),
     students.length
       ? el('div', { className: 'teacher-scroll' }, [
           el('table', { className: 'teacher-table' }, [
-            el('thead', {}, [el('tr', {}, ['Nom', 'Nivell', 'Mons', 'Intents', 'Últim dia', 'Li costa', 'Què li falta', 'On diu que ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
+            el('thead', {}, [el('tr', {}, ['Nom', 'Nivell', 'Mons', 'Intents', 'Últim dia', 'Li costa', 'Què li falta', 'Com tria', 'On diu que ha perdut el fil'].map((h) => el('th', { textContent: h })))]),
             el('tbody', {}, rows),
           ]),
         ])

@@ -34,6 +34,7 @@ import { CHALLENGES, GUIDES, MODES, callPhrase, closeStats, countNote, emptyStat
 import { LEVEL_COLOURS, errorText, listLibrary, loadLibrarySong, saveCode, savedCode, specFromLibrary } from './library.js';
 import { contourCard, contourLabel, contourLegend, isContourName } from './contour.js';
 import { LEVEL_NAMES, PATH_END_TEXT, isDone, levelBadge, levelOf as stepLevel } from './levels.js';
+import { CHOICES_MAX, CHOICES_MIN, observeChoices, recentDecisions } from './choices.js';
 
 const STORAGE_KEY = 'rockin.play.v1';
 const PATHS_KEY = 'rockin.play.paths';
@@ -245,6 +246,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   const levelBox = el('div', { className: 'play-level-box' }, [levelPill, levelLadder]);
   levelPill.addEventListener('click', () => {
     levelLadder.hidden = !levelLadder.hidden;
+    if (!levelLadder.hidden) refreshLevelPill();
   });
   missionScreen.append(el('div', { className: 'play-top' }, [backButton, hud, levelBox, missionStars, fullButton]), panel, scoreBox, scoreLegend, piano);
   backButton.addEventListener('click', () => showMap());
@@ -1503,8 +1505,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       },
       {
         art: el('div', { className: 'welcome-art levels' }, [0, 1, 3].map((n) => levelBadge(n))),
-        title: 'Al final, on ets i què pots fer',
-        text: 'Cada missió acaba dient on ets: <b>En procés</b>, <b>A prop</b> o <b>Ja ho tens!</b>, què t\'ha faltat i què pots fer. Quan vas bé, ja pots passar a la següent. Si alguna cosa no encaixa, les marques de la carta et diuen on.',
+        title: 'Al final, on ets i com vols seguir',
+        text: 'Cada missió acaba dient on ets: <b>En procés</b>, <b>A prop</b> o <b>Ja ho tens!</b>, què t\'ha faltat, i et pregunta <b>què creus que necessites ara</b>: tu tries com seguir. Si alguna cosa no encaixa, les marques de la carta et diuen on.',
       },
     ];
     let i = 0;
@@ -2125,6 +2127,27 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     ]));
   }
 
+  /**
+   * «Com tries el teu camí»: whether the student's own choices after each result
+   * have worked (not whether they match the game). The game's proposal shows
+   * only here, in the list of the last decisions, without judging.
+   */
+  function choicesSection() {
+    const list = me()?.choices ?? [];
+    const lines = observeChoices(list);
+    const recent = recentDecisions(list, 8);
+    return el('div', { className: 'play-choices-review' }, [
+      el('strong', { textContent: 'Com tries el teu camí' }),
+      lines.length
+        ? el('ul', {}, lines.map((t) => el('li', { innerHTML: t })))
+        : el('p', { className: 'play-note', textContent: `Després de cada missió tries què creus que necessites. Quan n\'hagis triat unes quantes (${CHOICES_MIN} o més), aquí veuràs com et funcionen les teves tries.` }),
+      recent.length ? el('details', { className: 'play-choices-recent' }, [
+        el('summary', { textContent: 'Les teves últimes decisions' }),
+        el('ul', {}, recent.map((t) => el('li', { innerHTML: t }))),
+      ]) : null,
+    ]);
+  }
+
   /** The «Què sé fer» button in the mission bar and its list, kept up to date. */
   function refreshLevelPill() {
     const st = me();
@@ -2142,6 +2165,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       pathFinished(handsPath(ROCKIN_PATH))
         ? el('p', { className: 'play-note', textContent: PATH_END_TEXT })
         : info.next ? el('p', { className: 'play-note', innerHTML: `<b>Et falta:</b> ${info.next}` }) : null,
+      choicesSection(),
     );
   }
 
@@ -2157,6 +2181,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       ]),
       el('div', { className: 'play-level-list' }, knowList(level)),
       pathFinished() ? el('p', { className: 'play-note', textContent: PATH_END_TEXT }) : info.next ? el('p', { className: 'play-note', innerHTML: `Següent: ${info.next}` }) : null,
+      choicesSection(),
     ].filter(Boolean));
     return box;
   }
@@ -2248,7 +2273,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
    * got: 0–3, as always (3 = «Ja ho tens!», 2 = «A prop», 0–1 = «En procés»;
    * 1 still opens the next mission, as before).
    */
-  function finishMission(got, { title, text, data = null, gaps = [], notes = [], tips = [], focus = null, toTop: toTopText = null, retry, retryLabel = '↻ Torna-ho a provar', extra = [], ratio = null, tempo = null, detail = null, groove = null }) {
+  function finishMission(got, { title, text, data = null, gaps = [], notes = [], tips = [], focus = null, toTop: toTopText = null, retry, retryLabel = '↻ Torna-ho a provar', extra = [], ratio = null, tempo = null, detail = null, groove = null, options = [], suggest = null }) {
     const st = me();
     const adaptive = mission.adaptive ?? null;
     const before = triedOf(mission.id);
@@ -2259,6 +2284,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const entry = logTry({ s: got, r: ratio, tempo, ...(plainGaps.length && level < 2 ? { g: plainGaps } : {}), ...(adaptive ? { a: adaptive.step.skill ?? `stage:${adaptive.step.stage}`, k: adaptive.kit.key } : {}) });
     const learnt = adaptive ? adaptiveResult(got, ratio, detail) : null;
     const band = got >= 1 ? raiseBandLevel(bandLevelOf(mission)) : null;
+    // The student chooses how to go on (not in lessons, study cards or «El meu camí», which adapts by itself).
+    const choosing = !adaptive && !mission.study && mission.type !== 'lesson' && Boolean(retry);
+    if (choosing) settleChoice(mission.id, level);
     saveStore();
     updateStars();
     renderHud(path.worlds.indexOf(mission.world));
@@ -2267,47 +2295,114 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const goNext = adaptive ? () => openAdaptive(adaptive.kit) : () => openMission(mission.index + 1);
     const canGo = adaptive ? true : got >= 1 && Boolean(next);
     const finishedNow = !adaptive && !mission.study && !wasFinished && pathFinished();
-    const buttons = [];
-    if (retry) buttons.push(button(retryLabel, retry, got >= 1 ? 'ghost' : 'primary'));
-    if (canGo) buttons.unshift(button(adaptive ? 'Següent repte →' : next.world?.level2 && !mission.world?.level2 ? 'Nivell 2, per aprofundir →' : worldDone ? 'Món següent →' : 'Següent →', goNext));
-    buttons.push(...extra);
-    buttons.push(button(adaptive ? 'El meu camí' : 'Mapa', showMap, 'ghost'));
     const countdown = el('p', { className: 'play-note' });
 
-    // 3. What you can do: the tips of the try, the notes of the game and a step to take.
     const todo = [...tips, ...notes.filter(Boolean)];
-    let advice = null;
-    let adviceButton = null;
-    if (adaptive || mission.study) {
-      advice = null;
-    } else if (finishedNow) {
-      advice = `<b>${PATH_END_TEXT}</b>`;
-    } else if (level === 2) {
-      if (stepLevel(before) === 2) advice = 'Això ja ho tens: no cal que ho practiquis més aquí. Porta-ho al grup.';
-      else if (next) advice = `Següent pas: <b>${escapeHtml(next.title)}</b>.`;
-      else {
-        const resume = nextIndex();
-        if (resume !== null && resume !== mission.index) {
-          advice = `Et queda per polir: <b>${escapeHtml(path.missions[resume].title)}</b>.`;
-          adviceButton = button(`→ ${path.missions[resume].title}`, () => openMission(resume), 'ghost');
-        }
-      }
-    } else if (level === 1) {
-      advice = `Ja pots passar a la següent. ${toTopText ?? 'Per a «Ja ho tens!», torna-hi quan vulguis i fes-ho sense errades.'}`;
-    } else {
-      const stuck = stuckTries();
-      const base = stuck >= 2 ? baseMission(focus) : null;
-      if (base !== null) {
-        advice = `Ja fa ${stuck} intents que queda «En procés». Val la pena tornar un moment a <b>${escapeHtml(path.missions[base].title)}</b>, que treballa just això, i després tornar aquí.`;
-        adviceButton = button(`↩ ${path.missions[base].title}`, () => openMission(base), 'ghost');
-      } else if (got >= 1 && next) {
-        advice = 'Pots passar a la següent, però aquest pas encara està en procés: quan hagis fet la resta, el camí t\'hi tornarà a portar.';
-      } else {
-        advice = 'Torna-hi amb calma, fixant-te en el que t\'ha faltat.';
-      }
-    }
     if (learnt) todo.push(`<span class="play-learnt">${learnt}</span>`);
     if (band) todo.push(`<span class="play-band-up">🎸 ${band}</span>`);
+
+    let buttons = [];
+    let advice = null;
+    let adviceButton = null;
+    let chooser = null;
+    if (choosing) {
+      // «Què creus que necessites ara?»: every option goes straight to doing it,
+      // in a fixed order, none highlighted. What the game would have proposed
+      // is worked out (the old recommendation) and kept, but not shown here.
+      const index = mission.index;
+      const before0 = index > 0 ? path.missions.slice(0, index) : [];
+      let part = null;
+      if (level < 2 && focus?.change) {
+        const [a, b] = focus.change;
+        const k = before0.findIndex((m) => m.type === 'change' && ((m.from === a && m.to === b) || (m.from === b && m.to === a)));
+        if (k >= 0) part = { id: 'part', label: `Practicar només el canvi ${chordName(path.missions[k].from)} → ${chordName(path.missions[k].to)}`, target: k };
+      }
+      if (level < 2 && !part && focus?.chord) {
+        const k = before0.findIndex((m) => m.type === 'chord' && m.chord === focus.chord);
+        if (k >= 0) part = { id: 'part', label: `Practicar només l'acord ${chordName(focus.chord)}`, target: k };
+      }
+      const backIndex = index > 0 && index - 1 !== part?.target ? index - 1 : null;
+      const back = backIndex !== null ? { id: 'back', label: `Tornar a la missió anterior: ${path.missions[backIndex].title}`, target: backIndex } : null;
+      const resume = next ? null : nextIndex();
+      const forward = next
+        ? { id: 'next', label: `Passar a la següent: ${next.title}`, target: index + 1 }
+        : resume !== null && resume !== index ? { id: 'next', label: `Anar a: ${path.missions[resume].title}`, target: resume } : null;
+      const doneOpt = level === 2 && stepLevel(before) === 2 ? { id: 'done', label: 'Ja no cal: ho porto al grup', target: null } : null;
+      const own = (id) => options.find((o) => o.id === id);
+      const list = [
+        own('slower') ?? own('faster'),
+        own('help-on') ?? own('help-off'),
+        part,
+        back,
+        { id: 'repeat', label: 'Repetir igual', go: retry },
+        forward,
+        doneOpt,
+      ].filter(Boolean);
+      // The game's own proposal, as before: back to a base step after 2+ «En procés», on when it is good enough.
+      const stuck = level === 0 ? stuckTries() : 0;
+      const baseK = stuck >= 2 ? baseMission(focus) : null;
+      let suggested;
+      if (finishedNow) suggested = 'done';
+      else if (level === 2) suggested = stepLevel(before) === 2 ? 'done' : suggest && ['help-off', 'faster'].includes(suggest) ? suggest : forward ? 'next' : 'done';
+      else if (level === 1) suggested = suggest && ['help-off', 'faster'].includes(suggest) ? suggest : forward ? 'next' : 'repeat';
+      else if (baseK !== null) suggested = baseK === part?.target ? 'part' : 'back';
+      else if (suggest) suggested = suggest;
+      else suggested = got >= 1 && forward ? 'next' : 'repeat';
+      const suggestedLabel = suggested === 'back' && baseK !== null && baseK !== backIndex
+        ? `Tornar a ${path.missions[baseK].title}`
+        : list.find((o) => o.id === suggested)?.label ?? (suggested === 'done' ? 'Ja no cal: ho porto al grup' : null);
+      const record = st && !st.teacher ? {
+        t: Date.now(), m: mission.id, p: path.id, title: mission.title, level,
+        ...(plainGaps.length ? { gaps: plainGaps[0].slice(0, 90) } : {}),
+        choice: null, suggested, sl: suggestedLabel,
+      } : null;
+      if (record) {
+        st.choices ??= [];
+        st.choices.push(record);
+        if (st.choices.length > CHOICES_MAX) st.choices.splice(0, st.choices.length - CHOICES_MAX);
+        saveStore();
+      }
+      const choose = (opt) => {
+        cancelAutoNext();
+        if (record) {
+          record.choice = opt.id;
+          record.cl = opt.label;
+          record.target = opt.go ? mission.id : opt.target === null ? null : path.missions[opt.target]?.id ?? null;
+          saveStore();
+        }
+        if (opt.go) opt.go();
+        else if (opt.target === null) showMap();
+        else openMission(opt.target);
+      };
+      chooser = el('div', { className: 'play-result-block choose' }, [
+        el('h3', { textContent: 'Què creus que necessites ara?' }),
+        el('div', { className: 'play-choices' }, list.map((opt) => {
+          const b = el('button', { type: 'button', className: 'play-choice', textContent: opt.label });
+          b.dataset.choice = opt.id;
+          b.addEventListener('click', () => choose(opt));
+          return b;
+        })),
+      ]);
+      if (finishedNow) advice = `<b>${PATH_END_TEXT}</b>`;
+      buttons = [button('Mapa', showMap, 'ghost')];
+      step = { space: () => choose(list.find((o) => o.id === 'repeat')) };
+    } else {
+      if (retry) buttons.push(button(retryLabel, retry, got >= 1 ? 'ghost' : 'primary'));
+      if (canGo) buttons.unshift(button(adaptive ? 'Següent repte →' : next.world?.level2 && !mission.world?.level2 ? 'Nivell 2, per aprofundir →' : worldDone ? 'Món següent →' : 'Següent →', goNext));
+      buttons.push(...extra);
+      buttons.push(button(adaptive ? 'El meu camí' : 'Mapa', showMap, 'ghost'));
+      if (adaptive || mission.study) {
+        advice = null;
+      } else if (finishedNow) {
+        advice = `<b>${PATH_END_TEXT}</b>`;
+      } else if (level === 2) {
+        if (stepLevel(before) === 2) advice = 'Això ja ho tens: no cal que ho practiquis més aquí. Porta-ho al grup.';
+        else if (next) advice = `Següent pas: <b>${escapeHtml(next.title)}</b>.`;
+      } else if (level === 1) {
+        advice = `Ja pots passar a la següent. ${toTopText ?? 'Per a «Ja ho tens!», torna-hi quan vulguis i fes-ho sense errades.'}`;
+      }
+      step = { space: canGo ? goNext : retry };
+    }
 
     // Self-assessment after the goal missions.
     let reflect = null;
@@ -2326,25 +2421,29 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       reflect = el('div', { className: 'play-reflect' }, [el('b', { textContent: level === 2 ? 'Com t\'ha anat?' : 'On has perdut el fil?' }), el('div', {}, chips)]);
     }
 
-    const showGaps = plainGaps.length > 0;
+    // With the choices, the tips stay as information next to what was missing.
+    const showGaps = plainGaps.length > 0 || (choosing && todo.length > 0);
     const side = [
       showGaps ? el('div', { className: 'play-result-block gaps' }, [
         el('h3', { textContent: level === 2 ? 'Per polir' : 'Què t\'ha faltat' }),
-        el('ul', {}, plainGaps.map((t) => el('li', { textContent: t }))),
+        plainGaps.length ? el('ul', {}, plainGaps.map((t) => el('li', { textContent: t }))) : null,
+        choosing && todo.length ? el('ul', { className: 'play-tips' }, todo.map((t) => el('li', { innerHTML: t }))) : null,
       ]) : null,
-      todo.length || advice ? el('div', { className: 'play-result-block todo' }, [
+      !choosing && (todo.length || advice) ? el('div', { className: 'play-result-block todo' }, [
         el('h3', { textContent: 'Què pots fer' }),
         todo.length ? el('ul', {}, todo.map((t) => el('li', { innerHTML: t }))) : null,
         advice ? el('p', { className: 'play-advice', innerHTML: advice }) : null,
         adviceButton ? el('div', { className: 'play-buttons' }, [adviceButton]) : null,
       ]) : null,
+      choosing && advice ? el('p', { className: 'play-advice', innerHTML: advice }) : null,
       reflect,
     ].filter(Boolean);
     setPanel({
       kicker: `${TYPE_LABEL[mission.type] ?? 'Missió'} · resultat`,
       title,
       big: [el('div', { className: 'play-result-level' }, [levelBadge(got), data || text ? el('span', { innerHTML: [data, text].filter(Boolean).join(' ') }) : null])],
-      extra: countdown,
+      // The options go in the main column, right under the level, where they are seen first.
+      extra: chooser ? el('div', {}, [chooser, countdown]) : countdown,
       side: side.length ? side : null,
       buttons,
       tone: level === 2 ? 'good' : level === 1 ? 'near' : 'progress',
@@ -2356,14 +2455,24 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     else sfx.bad();
     // The band keeps playing while the next challenge is announced.
     if (groove) setTimeout(() => startLounge(groove), 900);
-    step = { space: canGo ? goNext : retry };
-    // The goal missions wait for the self-assessment; the rest goes on by itself:
-    // passed → next mission, not passed → the same one again (with more help).
-    // At the end of the path, nothing goes on by itself: the message stays.
-    if (!reflect && !finishedNow) {
+    // Nothing goes on by itself when the student is the one who chooses; the
+    // rest (lessons, study cards, «El meu camí») goes on as before.
+    if (!choosing && !reflect && !finishedNow) {
       if (canGo && got >= 1) autoGo(countdown, AUTO_NEXT_SECONDS, adaptive ? 'Següent repte' : 'Següent missió', goNext);
       else if (retry && got === 0) autoGo(countdown, AUTO_RETRY_SECONDS, 'Ho tornem a provar', retry);
     }
+  }
+
+  /**
+   * A new result of a mission fills in how the last choice that led here went
+   * (the same mission again, or the one the choice took the student to).
+   */
+  function settleChoice(missionId, level) {
+    const list = me()?.choices;
+    if (!list) return;
+    // Only the latest decision counts: a result elsewhere means that choice was left behind.
+    const c = [...list].reverse().find((e) => e.choice && e.p === path.id);
+    if (c && c.target === missionId && (c.nextLevel === undefined || c.nextLevel === null)) c.nextLevel = level;
   }
 
   // ---- Lesson ---------------------------------------------------------------------------------------------------
@@ -4709,7 +4818,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         note: [
           note,
           drop ? 'Aquesta vegada anirà <b>més a poc a poc</b>.' : '',
-          boosted ? 'I les <b>tecles s\'il·luminen</b> per ajudar-te; quan et surti, tornarem a treure l\'ajuda.' : '',
+          boosted ? 'I les <b>tecles s\'il·luminen</b> per ajudar-te; quan et surti, després del resultat pots treure l\'ajuda.' : '',
           help === 'shape' || boosted ? '' : 'Mira les cartes, no el teclat.',
         ].filter(Boolean).join('<br>'),
         seconds: 7,
@@ -4807,31 +4916,44 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           const ratio = clean / results.length;
           let got = starsFor(ratio, type);
           if (slowed && got === 3) got = 2;
-          // Adapt the tempo of the next try.
+          // The student chooses how to go on (tempo, help, part, …); the game no
+          // longer changes tempo or help by itself. What it would have done is
+          // kept as its proposal (`suggest`).
           const drop = tempoDrop.get(mission.id) ?? 0;
-          let tempoNote = '';
-          // Going badly: the example comes back on its own before the next try,
-          // so you see and hear the card instead of guessing it again.
           const rough = got === 0 || ratio < 0.5;
           const inARow = rough ? (badTries.get(mission.id) ?? 0) + 1 : 0;
           if (rough) badTries.set(mission.id, inARow);
           else badTries.delete(mission.id);
-          const showDemo = rough && canListen;
-          // Help follows the result: a missed try lights the keys, a good one takes the help away again.
-          let helpNote = '';
-          if ((got === 0 || inARow >= 2) && help === 'none' && !helpBoost.get(mission.id)) {
-            helpBoost.set(mission.id, true);
-            helpNote = 'Al proper intent les tecles s\'il·luminen.';
-          } else if (got >= 2 && helpBoost.get(mission.id)) {
-            helpBoost.delete(mission.id);
-            helpNote = 'Molt bé! El proper cop, sense tecles il·luminades.';
+          const boosted = Boolean(helpBoost.get(mission.id));
+          let suggest = null;
+          if (ratio < 0.5 && drop < TEMPO_MAX_DROP && tempo > 44) suggest = 'slower';
+          else if ((got === 0 || inARow >= 2) && !boosted && (help === 'none' || canListen)) suggest = 'help-on';
+          else if (got >= 2 && boosted) suggest = 'help-off';
+          else if (ratio >= 0.999 && drop > 0) suggest = 'faster';
+          const options = [];
+          if (drop > 0 && got >= 1) {
+            options.push({ id: 'faster', label: `Pujar el tempo (${Math.min(baseTempo, tempo + TEMPO_STEP)}) i tornar-hi`, go: () => {
+              tempoDrop.set(mission.id, Math.max(0, drop - TEMPO_STEP));
+              play(false);
+            } });
+          } else if (drop < TEMPO_MAX_DROP && tempo > 44) {
+            options.push({ id: 'slower', label: `Baixar el tempo (${Math.max(44, tempo - TEMPO_STEP)}) i tornar-hi`, go: () => {
+              tempoDrop.set(mission.id, drop + TEMPO_STEP);
+              play(false);
+            } });
           }
-          if (ratio < 0.5 && drop < TEMPO_MAX_DROP) {
-            tempoDrop.set(mission.id, drop + TEMPO_STEP);
-            tempoNote = `El proper intent anirà més lent (tempo ${tempoNow()}).`;
-          } else if (ratio >= 0.999 && drop > 0) {
-            tempoDrop.set(mission.id, Math.max(0, drop - TEMPO_STEP));
-            tempoNote = drop - TEMPO_STEP > 0 ? `Molt bé! Ara una mica més ràpid (tempo ${tempoNow()}).` : 'Molt bé! Ara al tempo normal.';
+          if (boosted) {
+            options.push({ id: 'help-off', label: 'Treure l\'ajuda: sense tecles il·luminades', go: () => {
+              helpBoost.delete(mission.id);
+              play(false);
+            } });
+          } else if (help === 'none') {
+            options.push({ id: 'help-on', label: canListen ? 'Posar ajuda: escoltar-ho primer i tecles il·luminades' : 'Posar ajuda: tecles il·luminades', go: () => {
+              helpBoost.set(mission.id, true);
+              play(canListen ? listenMode : false);
+            } });
+          } else if (canListen) {
+            options.push({ id: 'help-on', label: multi ? 'Posar ajuda: escoltar primer totes les cartes' : 'Posar ajuda: escoltar-ho primer', go: () => play(listenMode) });
           }
           const recoveries = results.filter((r, k) => k > 0 && r.clean && !results[k - 1].clean).length;
           // The same marks as starsFor(): «A prop» from 80% of clean bars (band 70%),
@@ -4848,21 +4970,16 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
             focus: gapsInfo.focus,
             toTop: slowed ? 'Per a «Ja ho tens!», fes-ho net al tempo normal.' : 'Per a «Ja ho tens!», gairebé tots els compassos han de ser nets.',
             notes: [
-              tempoNote,
-              helpNote,
-              showDemo ? `<b>Abans de tornar-hi t'ho ensenyo:</b> el piano toca ${multi ? 'totes les cartes, tal com les has de tocar,' : demoCount === 1 ? 'la carta' : 'la roda'} i la pilota et va mostrant on cau cada nota.${inARow >= 2 ? ' Mira-t\'ho amb calma, que no corre pressa.' : ''}` : '',
+              boosted ? 'Aquest intent tenia les tecles il·luminades.' : '',
+              slowed ? `Has tocat més a poc a poc (tempo ${tempo}): per a «Ja ho tens!», cal fer-ho al tempo normal.` : '',
               clean < results.length ? 'Mira les marques de les cartes per veure què ha passat.' : '',
             ],
             tips: clean === results.length ? [] : tipsFor(stats),
             detail: level === 1 ? null : { results },
             groove: { style, tempo, chords: progression, meter: world.meter ?? '4/4' },
-            retry: () => play(showDemo ? listenMode : false),
-            retryLabel: showDemo
-              ? `♪ T'ho ensenyo i tornem-hi${tempoNow() < tempo ? ` (més lent, ${tempoNow()})` : ''}`
-              : tempoNow() < tempo ? `↻ Torna-hi més lent (${tempoNow()})` : '↻ Torna-ho a provar',
-            extra: canListen
-              ? [showDemo ? button('Torna-hi sense escoltar', () => play(false), 'ghost') : button(multi ? '♪ Escolta totes les cartes i toca' : '♪ Escolta i toca', () => play(listenMode), 'ghost')]
-              : [],
+            retry: () => play(false),
+            options,
+            suggest,
           });
         },
       });

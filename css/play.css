@@ -3624,3 +3624,70 @@ body.play-theme .level-badge.l2 {
 .play-panel.with-side {
   align-items: flex-start;
 }
+
+/* «Què creus que necessites ara?»: the student's options after a result, all alike. */
+.play-result-block + .play-result-block.choose,
+.play-reflect + .play-result-block.choose {
+  margin-top: 14px;
+}
+
+.play-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.play-choice {
+  width: 100%;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  color: var(--play-ink);
+  background: var(--play-panel);
+  border: 1px solid var(--play-line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.play-choice:hover,
+.play-choice:focus-visible {
+  border-color: var(--play-cyan);
+  background: rgb(54 197 240 / 10%);
+}
+
+.play-result-block .play-tips {
+  margin-top: 6px;
+  color: var(--play-muted);
+}
+
+/* «Com tries el teu camí», inside «Què sé fer». */
+.play-choices-review {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--play-line);
+}
+
+.play-choices-review ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.play-choices-review li + li {
+  margin-top: 4px;
+}
+
+.play-choices-recent {
+  margin-top: 8px;
+}
+
+.play-choices-recent summary {
+  cursor: pointer;
+  color: var(--play-muted);
+  font-size: 14px;
+}
+
+.play-panel-main > div > .play-result-block.choose {
+  margin-top: 16px;
+  max-width: 520px;
+}
