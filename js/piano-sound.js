@@ -8,6 +8,14 @@ const SAMPLE_NOTES = ['A1', 'C2', 'D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 
 
 let shared = null;
 
+/** The keyboard sounds the student can choose (route level 3). */
+export const SOUNDS = [
+  { id: 'piano', name: 'Piano', hint: 'Clar i amb atac: per a estrofes i per començar.' },
+  { id: 'electric', name: 'Piano elèctric', hint: 'Càlid i rodó: estrofes tranquil·les, balades.' },
+  { id: 'orgue', name: 'Orgue', hint: 'Sostingut i ple: tornades, rock, reggae.' },
+  { id: 'pad', name: 'Pad', hint: 'Un coixí llarg: intros i parts suaus.' },
+];
+
 export function pianoSound() {
   if (shared) return shared;
   const output = new Tone.Volume(-4).toDestination();
@@ -37,7 +45,33 @@ export function pianoSound() {
   }
 
   const name = (midi) => Tone.Frequency(midi, 'midi').toNote();
-  const voice = () => (loaded ? sampler : synth);
+
+  // Other keyboard sounds (level 3 of the route: "canviar els sons"): an organ,
+  // an electric piano and a pad, all synthesised. 'piano' is the sampler.
+  const others = {
+    orgue: new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'custom', partials: [1, 0.8, 0.5, 0.4, 0.2, 0.2, 0.1, 0.1] },
+      envelope: { attack: 0.01, decay: 0.05, sustain: 0.9, release: 0.08 },
+      volume: -14,
+    }).connect(output),
+    electric: new Tone.PolySynth(Tone.FMSynth, {
+      harmonicity: 2,
+      modulationIndex: 1.6,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.004, decay: 0.9, sustain: 0.2, release: 0.6 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 0.01, decay: 0.4, sustain: 0.1, release: 0.3 },
+      volume: -10,
+    }).connect(output),
+    pad: new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'fatsawtooth', count: 3, spread: 18 },
+      envelope: { attack: 0.35, decay: 0.3, sustain: 0.7, release: 1.2 },
+      volume: -18,
+    }).connect(output),
+  };
+  for (const v of Object.values(others)) v.maxPolyphony = 16;
+  let current = 'piano';
+  const voice = () => (current === 'piano' ? (loaded ? sampler : synth) : others[current] ?? synth);
 
   shared = {
     get loaded() {
@@ -51,13 +85,23 @@ export function pianoSound() {
       voice().triggerAttack(name(note), Tone.immediate(), velocity);
     },
     noteOff(note) {
-      // Release on both, in case the samples finished loading while the key was down.
+      // Release on every voice, in case the sound changed while the key was down.
       synth.triggerRelease(name(note), Tone.immediate());
       if (loaded) sampler.triggerRelease(name(note), Tone.immediate());
+      for (const v of Object.values(others)) v.triggerRelease(name(note), Tone.immediate());
     },
     releaseAll() {
       synth.releaseAll();
       if (loaded) sampler.releaseAll();
+      for (const v of Object.values(others)) v.releaseAll();
+    },
+    /** Which keyboard sound plays: 'piano' | 'orgue' | 'electric' | 'pad'. */
+    setSound(kind) {
+      if (kind !== current) this.releaseAll();
+      current = SOUNDS.some((s) => s.id === kind) ? kind : 'piano';
+    },
+    get sound() {
+      return current;
     },
     setVolume(db) {
       output.volume.value = db;

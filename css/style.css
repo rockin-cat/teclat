@@ -1544,6 +1544,16 @@ button.home-door.session {
   background: #ffc60a;
 }
 
+.home-door.classic .door-icon {
+  color: #1d1d1f;
+  background: #d9d2c5;
+}
+
+button.home-door.classic {
+  padding: 16px 22px;
+}
+
+
 /* Level of achievement badge (shared by Sessió and Juga). */
 .level-badge {
   display: inline-block;

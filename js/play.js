@@ -33,8 +33,10 @@ import { STAGE_NAMES, applyOutcome, emptyState, known, levelOf, nextStep, progre
 import { CHALLENGES, GUIDES, MODES, callPhrase, closeStats, countNote, emptyStats, guideNotes, readStats } from './improvise.js';
 import { LEVEL_COLOURS, errorText, listLibrary, loadLibrarySong, saveCode, savedCode, specFromLibrary } from './library.js';
 import { contourCard, contourLabel, contourLegend, isContourName } from './contour.js';
+import { ALL_STEPS, CHOICES, GAPS, NIVELLS, ROUTE, VOICE_TEXT, gapsFor, proposeLevel, suggestChoice } from './route.js';
+import { SOUNDS } from './piano-sound.js';
 import { LEVEL_NAMES, PATH_END_TEXT, isDone, levelBadge, levelOf as stepLevel } from './levels.js';
-import { CHOICES_MAX, CHOICES_MIN, observeChoices, recentDecisions } from './choices.js';
+import { CHOICES_MAX, CHOICES_MIN, CHOICE_NAMES, observeChoices, recentDecisions } from './choices.js';
 
 const STORAGE_KEY = 'rockin.play.v1';
 const PATHS_KEY = 'rockin.play.paths';
@@ -207,8 +209,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   const helpBoost = new Map(); // mission id -> the keys light up again, after a missed try
   const badTries = new Map(); // mission id -> tries in a row that went badly (the demo comes back)
   let pathId = storage.get('rockin.play.path') ?? null; // song path chosen in "Cançons"
-  let section = 'juga'; // juga | cancons | improvisa
-  const homeScreen = () => (section === 'cancons' ? 'songs' : section === 'banda' ? 'jam' : section === 'improvisa' ? 'improv' : 'map');
+  let section = 'juga'; // juga | ruta | cancons | improvisa
+  const homeScreen = () => (section === 'ruta' ? 'ruta' : section === 'cancons' ? 'songs' : section === 'banda' ? 'jam' : section === 'improvisa' ? 'improv' : 'map');
   let path = ROCKIN_PATH;
   let screen = 'map'; // map | creator | teacher | who | welcome
   let board = ['taller', 'adapt'].includes(storage.get('rockin.play.board')) ? storage.get('rockin.play.board') : 'cami'; // which map the student sees
@@ -865,6 +867,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   function leaveMission() {
     stopAnimation();
     stopSession();
+    pianoSound().setSound('piano');
     cancelAutoNext();
     step = null;
     mission = null;
@@ -944,6 +947,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       const songPath = resolvePath();
       if (screen === 'map' && !songPath) screen = 'songs';
       path = songPath ? handsPath(songPath) : ROCKIN_PATH;
+    } else if (section === 'ruta') {
+      if (!['who', 'welcome', 'hands', 'teacher', 'guide', 'ruta-song', 'decisions', 'backpack'].includes(screen)) screen = 'ruta';
+      path = routePaths().one;
     } else if (section === 'banda') {
       if (!['who', 'welcome', 'hands', 'teacher'].includes(screen)) screen = 'jam';
       path = ROCKIN_PATH;
@@ -951,10 +957,15 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       if (!['who', 'welcome', 'hands', 'teacher'].includes(screen)) screen = 'improv';
       path = ROCKIN_PATH;
     } else {
-      if (['songs', 'creator', 'jam', 'improv'].includes(screen)) screen = 'map';
+      if (['songs', 'creator', 'jam', 'improv', 'ruta', 'ruta-song', 'decisions', 'backpack'].includes(screen)) screen = 'map';
       path = board === 'taller' && screen === 'map' ? WORKSHOP_PATH : handsPath(ROCKIN_PATH);
     }
     if (screen === 'who') return showWho();
+    if (['ruta', 'ruta-song', 'decisions', 'backpack'].includes(screen) && me() && !me().hands && !me().teacher) screen = 'hands';
+    if (screen === 'ruta') return showRoute();
+    if (screen === 'ruta-song') return showRouteSong();
+    if (screen === 'decisions') return showDecisions();
+    if (screen === 'backpack') return showBackpack();
     if (screen === 'songs') return showSongs();
     if (screen === 'creator') return showCreator();
     if (screen === 'teacher') return showTeacher();
@@ -1193,6 +1204,525 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       escape: back,
     };
     ask();
+  }
+
+  // ---- Full de ruta: the poster of the keyboard ---------------------------------------------------------
+  // Ten levels, all open, over the student's own song. Every step is a mission
+  // of the song's path (or an improvisation / a composition); when it ends the
+  // student says how it went, what was missing and what to do next.
+
+  const ROCKIN_WHEEL_SPEC = { id: 'rockin-roda', name: 'La roda ROCKIN', artist: 'Do – Sol – La m – Fa', key: 'C', progression: 'C | G | Am | F', chorus: '', meter: '4/4', style: 'rock', tempo: 100, readCards: false };
+  let routeSongId = storage.get('rockin.play.route.song') ?? ROCKIN_WHEEL_SPEC.id;
+  const routeCache = new Map();
+  let routeEntry = null; // the step being played
+
+  const routeSpec = () => (routeSongId === ROCKIN_WHEEL_SPEC.id ? ROCKIN_WHEEL_SPEC : allSpecs().find((x) => x.id === routeSongId) ?? ROCKIN_WHEEL_SPEC);
+  function routePaths() {
+    const spec = routeSpec();
+    const key = `${spec.id}|${spec.progression}|${spec.parts ? Object.values(spec.parts).join('/') : ''}`;
+    if (routeCache.has(key)) return routeCache.get(key);
+    let one;
+    try {
+      one = buildPath(spec, getCards());
+    } catch (error) {
+      console.warn('[Ruta] path could not be built', error);
+      one = buildPath(ROCKIN_WHEEL_SPEC, getCards());
+    }
+    const made = { spec, one, chord: handsPath(one, 'chord'), bass: handsPath(one, 'bass') };
+    routeCache.set(key, made);
+    return made;
+  }
+  const routeStore = () => {
+    const st = me();
+    if (!st) return {};
+    st.route ??= {};
+    st.route[routeSongId] ??= {};
+    return st.route[routeSongId];
+  };
+  const routeBest = (key) => routeStore()[key]?.best ?? null;
+
+  /** The steps of the route for the current song, with their missions resolved. */
+  function routeEntries() {
+    const paths = routePaths();
+    const { spec, one } = paths;
+    const missionIn = (p, suffix, hands) => p.missions.find((m) => m.id === `${spec.id}:${suffix}${hands === 'chord' ? '@2' : hands === 'bass' ? '@2b' : ''}`) ?? null;
+    const out = [];
+    for (const level of ROUTE) {
+      for (const step of level.passos) {
+        const base = { level, step };
+        if (step.chords) {
+          // One step per chord of the wheel: build it.
+          for (const m of one.missions.filter((m) => m.id.startsWith(`${spec.id}:l:c-`))) {
+            out.push({ ...base, key: `${step.id}:${m.chord}`, title: `Construeix ${chordName(m.chord)}`, text: step.text, path: one, mission: m });
+          }
+          continue;
+        }
+        if (step.improv) {
+          out.push({ ...base, key: step.id, title: step.titol, text: step.text, path: one, kind: 'improv' });
+          continue;
+        }
+        if (step.compose) {
+          out.push({ ...base, key: step.id, title: step.titol, text: step.text, path: one, kind: 'compose' });
+          continue;
+        }
+        const p = step.from === 'chord' ? paths.chord : step.from === 'bass' ? paths.bass : one;
+        let m = null;
+        if (step.world) {
+          const w = p.worlds.find((x) => x.id.endsWith(`:${step.world}`));
+          m = w?.missions[step.at ?? 0] ?? null;
+        } else if (step.mid === 'structure') {
+          m = missionIn(p, 's:structure') ?? missionIn(p, 's:0');
+        } else {
+          m = missionIn(p, step.mid, step.from);
+        }
+        if (!m) continue; // the song has no such mission (no two-hand card for its meter, say)
+        out.push({ ...base, key: step.id, title: step.titol, text: step.text, path: p, mission: m });
+      }
+    }
+    return out;
+  }
+
+  const routePill = (best) => el('span', { className: `route-pill lvl-${best ?? 'none'}`, textContent: best ? NIVELLS[best] : 'Per fer' });
+  const routeDone = (entries, level) => entries.filter((e) => e.level === level).some((e) => routeBest(e.key) === 'ok');
+
+  let routeLevelOpen = null; // the level whose steps are shown (null: the poster)
+
+  /** The poster header: piano icon, PIANO / TECLAT, the pill. */
+  function posterHead(compact = false) {
+    return el('div', { className: `poster-head${compact ? ' compact' : ''}` }, [
+      el('span', { className: 'poster-piano', ariaHidden: 'true' }, [el('i'), el('i'), el('i'), el('i'), el('i')]),
+      el('div', { className: 'poster-title' }, [el('span', { className: 'poster-w1', textContent: 'PIANO' }), el('span', { className: 'poster-w2', textContent: 'TECLAT' })]),
+      el('span', { className: 'poster-sub', textContent: 'FULL DE RUTA · NIVELLS' }),
+    ]);
+  }
+
+  function showRoute() {
+    const st = me();
+    const spec = routeSpec();
+    const entries = routeEntries();
+    const progress = (level) => {
+      const mine = entries.filter((e) => e.level === level);
+      const ok = mine.filter((e) => routeBest(e.key) === 'ok').length;
+      const touched = mine.filter((e) => routeBest(e.key)).length;
+      return { total: mine.length, ok, touched };
+    };
+    const songLine = el('div', { className: 'poster-song' }, [
+      el('span', { textContent: 'La teva cançó: ' }),
+      el('b', { textContent: spec.name }),
+      spec.artist ? el('span', { textContent: ` · ${spec.artist}` }) : null,
+      el('span', { className: 'poster-song-chords' }, splitProgression(spec.progression).map((c) => chordChip(c, spec.key ?? keyOf(spec)))),
+      button('Canvia la cançó', () => {
+        screen = 'ruta-song';
+        showMap();
+      }, 'ghost small'),
+    ]);
+    const tools = el('div', { className: 'route-tools' }, [
+      button('🎒 Què sé fer', () => { screen = 'backpack'; showMap(); }, 'ghost small'),
+      button('🧭 Com tries el teu camí', () => { screen = 'decisions'; showMap(); }, 'ghost small'),
+      button('🎯 Prova de nivell', () => placementTest(), 'ghost small'),
+      handsChip(),
+      button('🎸 Camí clàssic', () => { section = 'juga'; screen = 'map'; showMap(); }, 'ghost small'),
+    ]);
+    const foot = el('div', { className: 'poster-foot' }, [
+      el('img', { src: 'assets/brand/rockin-wordmark-dark.png', alt: 'ROCKIN', className: 'poster-logo' }),
+      el('em', { textContent: 'Pugem de nivell?' }),
+    ]);
+
+    const level = routeLevelOpen ? ROUTE.find((l) => l.n === routeLevelOpen) : null;
+    if (level) {
+      // One level open: its steps, on the poster's colours.
+      const mine = entries.filter((e) => e.level === level);
+      const pr = progress(level);
+      const done = pr.ok > 0;
+      setChildren(mapScreen,
+        teacherBannerEl(),
+        el('div', { className: 'poster level-open' }, [
+          posterHead(true),
+          el('div', { className: 'poster-level' }, [
+            el('div', { className: 'poster-level-head' }, [
+              el('span', { className: 'ptile-num', textContent: String(level.n) }),
+              el('div', { className: 'ptile-text' }, [el('b', { textContent: level.titol }), el('small', { textContent: level.sub })]),
+              el('span', { className: 'ptile-icon', textContent: level.icona }),
+            ]),
+            el('p', { className: `route-band${done ? ' on' : ''}`, innerHTML: `<b>A la banda${done ? ' ja' : ''} pots…</b> ${level.banda}` }),
+            el('div', { className: 'route-steps' }, mine.map((e) => {
+              const best = routeBest(e.key);
+              const b = el('button', { type: 'button', className: `route-step lvl-${best ?? 'none'}` }, [
+                el('span', { className: 'route-step-text' }, [el('span', { className: 'route-step-title', textContent: e.title }), el('small', { textContent: e.text })]),
+                routePill(best),
+              ]);
+              b.addEventListener('click', () => openStep(e));
+              return b;
+            })),
+            el('div', { className: 'play-buttons left' }, [
+              button('← Tots els nivells', () => { routeLevelOpen = null; showRoute(); }, 'ghost'),
+              level.n > 1 ? button(`← Nivell ${level.n - 1}`, () => { routeLevelOpen = level.n - 1; showRoute(); }, 'ghost small') : null,
+              level.n < 10 ? button(`Nivell ${level.n + 1} →`, () => { routeLevelOpen = level.n + 1; showRoute(); }, 'ghost small') : null,
+            ]),
+          ]),
+          foot,
+        ]),
+        tools,
+      );
+      toTop();
+      return;
+    }
+
+    const tile = (lv) => {
+      const pr = progress(lv);
+      const b = el('button', { type: 'button', className: `ptile${pr.ok ? ' done' : ''}${pr.touched && !pr.ok ? ' cur' : ''}` }, [
+        el('span', { className: 'ptile-num', textContent: String(lv.n) }),
+        el('div', { className: 'ptile-text' }, [
+          el('b', { textContent: lv.titol }),
+          el('small', { textContent: lv.sub }),
+          el('span', { className: 'pbar' }, [el('i', { style: `width:${pr.total ? Math.round((pr.ok / pr.total) * 100) : 0}%` })]),
+          el('em', { textContent: pr.total ? `${pr.ok} de ${pr.total} a «Ja ho tens!»${pr.touched && pr.touched > pr.ok ? ` · ${pr.touched - pr.ok} en marxa` : ''}` : 'Sense passos per a aquesta cançó' }),
+        ]),
+        el('span', { className: 'ptile-icon', textContent: lv.icona }),
+      ]);
+      b.addEventListener('click', () => { routeLevelOpen = lv.n; showRoute(); });
+      return b;
+    };
+    setChildren(mapScreen,
+      teacherBannerEl(),
+      el('div', { className: 'poster' }, [
+        posterHead(),
+        songLine,
+        el('div', { className: 'poster-grid' }, ROUTE.map(tile)),
+        foot,
+      ]),
+      el('p', { className: 'play-note route-hint', textContent: st ? `Hola, ${st.name}! Tots els nivells són oberts: obre'n un, tria el pas que creguis que t'ajudarà més i, en acabar, digues com ha anat i què faràs després.` : '' }),
+      tools,
+    );
+    toTop();
+  }
+
+  function showRouteSong() {
+    const options = [ROCKIN_WHEEL_SPEC, ...allSpecs()];
+    setChildren(mapScreen,
+      el('div', { className: 'play-hello' }, [
+        el('div', { className: 'play-hello-text' }, [
+          el('div', { className: 'play-kicker', textContent: 'Full de ruta' }),
+          el('h2', { textContent: 'La teva cançó' }),
+          el('p', { className: 'play-note', textContent: 'Tots els nivells del pòster es fan sobre la roda d\'aquesta cançó. La pots canviar quan vulguis; el que tens fet queda guardat per a cada cançó.' }),
+        ]),
+        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost')]),
+      ]),
+      el('div', { className: 'play-world' }, [
+        el('h3', { textContent: 'Tria' }),
+        el('div', { className: 'play-songs' }, options.map((spec) => {
+          const b = el('button', { type: 'button', className: `play-song${spec.id === routeSongId ? ' on' : ''}${spec.book ? ' book' : ''}` }, [
+            el('span', { className: 'play-song-icon', textContent: spec.id === ROCKIN_WHEEL_SPEC.id ? '🎸' : spec.book ? '📖' : spec.library ? '📚' : '♬' }),
+            el('strong', { textContent: spec.name || spec.progression }),
+            spec.artist ? el('small', { className: 'play-song-artist', textContent: spec.artist }) : null,
+            el('div', { className: 'play-goal-chords' }, splitProgression(spec.progression).map((c) => chordChip(c, spec.key ?? keyOf(spec)))),
+            el('small', { textContent: `${styleName(spec.style)} · ${spec.tempo} bpm` }),
+          ]);
+          b.addEventListener('click', () => {
+            routeSongId = spec.id;
+            storage.set('rockin.play.route.song', spec.id);
+            screen = 'ruta';
+            showMap();
+          });
+          return b;
+        })),
+        el('p', { className: 'play-note', innerHTML: 'Per afegir cançons: la porta <b>Cançons</b> (llibre ROCKIN, biblioteca compartida o una roda teva).' }),
+      ]),
+    );
+    toTop();
+  }
+
+  /** Opens a step of the route. */
+  function openStep(entry) {
+    routeEntry = entry;
+    path = entry.path;
+    const step = entry.step;
+    if (entry.kind === 'improv') return routeImprov(entry);
+    if (entry.kind === 'compose') return routeCompose(entry);
+    const m = { ...entry.mission, route: entry };
+    if (step.voice) m.voice = step.voice;
+    if (step.sounds) m.sounds = step.sounds;
+    openMission(m);
+  }
+
+  const routeNeighbours = (entry) => {
+    const entries = routeEntries();
+    const i = entries.findIndex((e) => e.key === entry.key);
+    return { prev: i > 0 ? entries[i - 1] : null, next: i >= 0 && i + 1 < entries.length ? entries[i + 1] : null };
+  };
+
+  /**
+   * The end of a step: the game proposes a level, the student confirms or
+   * changes it, says what was missing and chooses what to do next («Què creus
+   * que necessites ara?»). The choice goes to the same list as in the classic
+   * path (st.choices), so «Com tries el teu camí» reads both alike, and it is
+   * checked the next time the step is played.
+   */
+  function routeResult({ stars = null, ratio = null, retry = null, tips = [], text = '', lines = [], gaps: plainGaps = [], notes = [], options = [] }) {
+    const entry = routeEntry;
+    const st = me();
+    if (!entry || !st) return showMap();
+    const missionId = mission?.id;
+    const LV = ['no', 'gairebe', 'ok'];
+    const proposed = proposeLevel({ stars, ratio });
+    let level = proposed;
+    const gapList = gapsFor(entry.step, mission, entry.level);
+    const chosenGaps = new Set();
+    const store = routeStore();
+    const before = store[entry.key];
+    const routeP = `ruta:${routeSongId}`;
+    const { prev, next } = routeNeighbours(entry);
+    const helped = Boolean(helpBoost.get(missionId)) || mission?.help === 'shape';
+    const drop = tempoDrop.get(missionId) ?? 0;
+    // What happened to the last choice that led here (the same step again, or the one it took the student to).
+    st.choices ??= [];
+    const settled = st.teacher ? null : [...st.choices].reverse().find((c) => c.choice && c.p === routeP);
+    const settles = Boolean(settled && settled.target === entry.key && (settled.nextLevel === undefined || settled.nextLevel === null));
+    const rec = st.teacher ? null : { t: Date.now(), m: entry.key, p: routeP, title: entry.title, level: LV.indexOf(level), choice: null, suggested: null, sl: null };
+    if (rec) {
+      st.choices.push(rec);
+      if (st.choices.length > CHOICES_MAX) st.choices.splice(0, st.choices.length - CHOICES_MAX);
+    }
+    const save = () => {
+      store[entry.key] = { best: LV[Math.max(LV.indexOf(before?.best ?? 'no'), LV.indexOf(level))], last: level, tries: (before?.tries ?? 0) + 1, t: Date.now() };
+      if (rec) {
+        rec.level = LV.indexOf(level);
+        const gapText = [...chosenGaps].map((g) => GAPS[g].t).concat(plainGaps).join(' · ');
+        if (gapText) rec.gaps = gapText.slice(0, 90);
+        else delete rec.gaps;
+      }
+      if (settles) settled.nextLevel = LV.indexOf(level);
+      saveStore();
+    };
+    save();
+
+    // The options: the mission's own (tempo, help: they do what they say), then the route's.
+    const own = (id) => options.find((o) => o.id === id);
+    const list = () => [
+      own('slower') ?? own('faster'),
+      own('help-on') ?? own('help-off'),
+      retry || entry.kind ? { id: 'repeat', label: CHOICES.repeat, go: retry ?? (() => openStep(entry)) } : null,
+      prev ? { id: 'back', label: `${CHOICES.back}: ${prev.title}`, to: prev } : null,
+      next ? { id: 'next', label: `${CHOICES.next}: ${next.title}`, to: next } : null,
+      { id: 'done', label: CHOICES.done, to: null },
+    ].filter(Boolean);
+    const suggested = () => {
+      const ids = new Set(list().map((o) => o.id));
+      const sug = suggestChoice({ level, gaps: [...chosenGaps], helped, canSlow: ids.has('slower'), canFast: ids.has('faster'), canHelp: ids.has('help-on'), hasPrev: Boolean(prev), hasNext: Boolean(next) });
+      return ids.has(sug) ? sug : 'repeat';
+    };
+    const noteSuggestion = () => {
+      if (!rec) return;
+      rec.suggested = suggested();
+      rec.sl = list().find((o) => o.id === rec.suggested)?.label ?? null;
+    };
+    noteSuggestion();
+
+    const levelChips = el('div', { className: 'route-levels' });
+    const gapChips = el('div', { className: 'route-gaps' });
+    const choiceBox = el('div', { className: 'play-choices' });
+    const tipBox = el('p', { className: 'play-note route-tip' });
+    const renderLevels = () => setChildren(levelChips, ...LV.map((k, n) => {
+      const b = el('button', { type: 'button', className: `play-chip lvl-${k}${level === k ? ' on' : ''}`, textContent: LEVEL_NAMES[n] });
+      b.addEventListener('click', () => {
+        level = k;
+        save();
+        noteSuggestion();
+        renderLevels();
+      });
+      return b;
+    }));
+    const renderGaps = () => {
+      setChildren(gapChips, ...gapList.map((g) => {
+        const b = el('button', { type: 'button', className: `play-chip small${chosenGaps.has(g) ? ' on' : ''}`, textContent: GAPS[g].t });
+        b.addEventListener('click', () => {
+          if (chosenGaps.has(g)) chosenGaps.delete(g);
+          else chosenGaps.add(g);
+          save();
+          noteSuggestion();
+          renderGaps();
+        });
+        return b;
+      }));
+      tipBox.innerHTML = [...chosenGaps].slice(0, 2).map((g) => `💡 ${GAPS[g].tip}`).join('<br>');
+    };
+    const act = (opt) => {
+      cancelAutoNext();
+      if (rec) {
+        rec.choice = opt.id;
+        rec.cl = opt.label;
+        rec.target = opt.go ? entry.key : opt.to ? opt.to.key : null;
+        saveStore();
+      }
+      if (opt.go) return opt.go();
+      if (opt.to) return openStep(opt.to);
+      screen = 'ruta';
+      showMap();
+    };
+    setChildren(choiceBox, ...list().map((opt) => {
+      const b = el('button', { type: 'button', className: 'play-choice', textContent: opt.label });
+      b.dataset.choice = opt.id;
+      b.addEventListener('click', () => act(opt));
+      return b;
+    }));
+    renderLevels();
+    renderGaps();
+    const measure = ratio !== null && !text ? `${Math.round(ratio * 100)} % de compassos nets.` : '';
+    const info = [...plainGaps, ...tips, ...notes];
+    setPanel({
+      kicker: `Nivell ${entry.level.n} · ${entry.level.titol} · ${entry.title}`,
+      title: LEVEL_NAMES[LV.indexOf(level)],
+      text: [measure, text && mission?.type !== 'lesson' ? text : ''].filter(Boolean).join(' '),
+      list: lines,
+      extra: el('div', { className: 'route-assess' }, [
+        el('h4', { textContent: 'Com ha anat? (el joc en proposa un; canvia\'l si no hi estàs d\'acord)' }),
+        levelChips,
+        gapList.length ? el('h4', { textContent: 'Què t\'ha faltat? (pots marcar-ne més d\'un, o cap)' }) : null,
+        gapChips,
+        tipBox,
+        el('div', { className: 'play-result-block choose' }, [
+          el('h3', { textContent: 'Què creus que necessites ara?' }),
+          choiceBox,
+        ]),
+      ]),
+      side: info.length ? [el('div', { className: 'play-result-block gaps' }, [
+        el('h3', { textContent: level === 'ok' ? 'Per polir' : 'El que s\'ha vist' }),
+        el('ul', { className: 'play-tips' }, info.map((t) => el('li', { innerHTML: t }))),
+      ])] : null,
+      buttons: [button('Full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost')],
+      tone: level === 'ok' ? 'good' : level === 'gairebe' ? 'near' : 'progress',
+    });
+    if (level === 'ok') sfx.good();
+    else if (level === 'gairebe') sfx.ok();
+    step = { escape: () => { screen = 'ruta'; showMap(); }, space: () => { const r = list().find((o) => o.id === 'repeat'); if (r) act(r); } };
+  }
+
+  /** Improvisation steps: the Improvisa engine, then the same assessment. */
+  function routeImprov(entry) {
+    const { spec } = routePaths();
+    const song = { key: spec.id, name: spec.name || spec.progression, sub: spec.artist ?? '', wheel: splitProgression(spec.progression), chordKey: spec.key ?? keyOf(spec), style: spec.style, tempo: spec.tempo, meter: spec.meter ?? '4/4' };
+    improvCfg.mode = entry.step.improv.mode;
+    improvCfg.guide = entry.step.improv.guide;
+    startImprov(song);
+  }
+
+  /** Composition steps: choose the material, then play it as a mission. */
+  function routeCompose(entry) {
+    const { spec, one } = routePaths();
+    mapScreen.hidden = true;
+    missionScreen.hidden = false;
+    showScore(false);
+    showKeyboard(false);
+    hud.replaceChildren(el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Nivell ${entry.level.n} · ${entry.level.titol}` }), el('strong', { textContent: entry.title })]));
+    missionStars.textContent = '';
+    const world = one.worlds.find((w) => w.id.endsWith(':ritme-roda')) ?? one.worlds[0];
+    const back = button('← Full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost');
+    if (entry.step.compose === 'cards') {
+      const pool = playableCards(getCards(), { cardType: 'rhythmic', meter: parseTimeSignature(spec.meter ?? '4/4') });
+      const picked = [];
+      const strip = el('div', { className: 'play-cardstrip-row' });
+      const render = () => setChildren(strip, ...pool.slice(0, 16).map((card) => {
+        const img = el('img', { alt: cardLabel(card), decoding: 'async', src: card.src });
+        const b = el('button', { type: 'button', className: `play-cardpick${picked.includes(card) ? ' on' : ''}` }, [img]);
+        b.addEventListener('click', () => {
+          const i = picked.indexOf(card);
+          if (i >= 0) picked.splice(i, 1);
+          else if (picked.length < 2) picked.push(card);
+          render();
+          go.disabled = picked.length !== 2;
+        });
+        return b;
+      }));
+      const go = button('▶ Toca la introducció', () => {
+        openMission({ id: `${spec.id}:compose:cards`, type: 'mix', title: 'La teva introducció', cards: picked.map((c) => c.filename), world, route: entry, compose: true });
+      });
+      go.disabled = true;
+      render();
+      setPanel({ kicker: 'Composició', title: entry.title, text: `${entry.text} Tria <b>dues cartes</b>: la primera és el primer compàs de cada acord i la segona, el segon… Després la toques sobre la roda i decideixes si et convenç.`, extra: strip, buttons: [go, back] });
+    } else {
+      const input = el('input', { type: 'text', className: 'route-arrows', value: '●↑↓→', maxLength: 4, autocomplete: 'off' });
+      const keys = el('div', { className: 'route-arrow-keys' }, ['●', '↑', '↓', '→', '⇈', '⇊', '○', '⌫'].map((ch) => {
+        const b = el('button', { type: 'button', className: 'play-chip', textContent: ch });
+        b.addEventListener('click', () => {
+          if (ch === '⌫') input.value = [...input.value].slice(0, -1).join('');
+          else if ([...input.value].length < 4) input.value += ch;
+          input.dispatchEvent(new Event('input'));
+        });
+        return b;
+      }));
+      const preview = el('p', { className: 'play-note' });
+      const check = () => {
+        const chars = [...input.value].filter((c) => '●↑↓→⇈⇊○'.includes(c));
+        preview.textContent = chars.length === 4 ? `La teva carta: ${chars.join(' ')}` : `Calen 4 símbols (en tens ${chars.length}).`;
+        go.disabled = chars.length !== 4;
+      };
+      input.addEventListener('input', check);
+      const go = button('▶ Toca la melodia', () => {
+        const code = [...input.value].filter((c) => '●↑↓→⇈⇊○'.includes(c)).join('');
+        const cw = one.worlds.find((w) => w.id.endsWith(':contorn')) ?? world;
+        openMission({ id: `${spec.id}:compose:arrows`, type: 'pattern', title: `La teva melodia: ${[...code].join(' ')}`, card: `contour:${code}`, help: 'shape', world: cw, route: entry, compose: true });
+      });
+      check();
+      setPanel({ kicker: 'Composició', title: entry.title, text: `${entry.text} Comença amb <b>●</b> (una nota de l'acord) i escriu tres fletxes més.`, extra: el('div', {}, [input, keys, preview]), buttons: [go, back] });
+    }
+    step = { escape: () => { screen = 'ruta'; showMap(); } };
+  }
+
+  function showDecisions() {
+    const st = me();
+    const list = st?.choices ?? [];
+    const lines = observeChoices(list);
+    const recent = recentDecisions(list, 10);
+    setChildren(mapScreen,
+      el('div', { className: 'play-hello' }, [
+        el('div', { className: 'play-hello-text' }, [
+          el('div', { className: 'play-kicker', textContent: 'Full de ruta' }),
+          el('h2', { textContent: 'Com tries el teu camí' }),
+          el('p', { className: 'play-note', textContent: 'Cada vegada que acabes un pas tries què fas després. Aquí es veu si les teves estratègies funcionen: què sols triar quan et costa i què passa al següent intent. Hi compten també les tries del camí clàssic.' }),
+        ]),
+        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost')]),
+      ]),
+      el('div', { className: 'play-world' }, [
+        el('h3', { textContent: 'El que es veu' }),
+        lines.length
+          ? el('ul', { className: 'route-observations' }, lines.map((t) => el('li', { innerHTML: t })))
+          : el('p', { className: 'play-note', textContent: `Quan hagis triat unes quantes vegades (${CHOICES_MIN} o més), aquí veuràs com et funcionen les teves tries.` }),
+      ]),
+      el('div', { className: 'play-world' }, [
+        el('h3', { textContent: 'Les últimes decisions' }),
+        recent.length ? el('ul', { className: 'route-history' }, recent.map((t) => el('li', { innerHTML: t }))) : el('p', { className: 'play-note', textContent: 'Encara cap.' }),
+      ]),
+    );
+    toTop();
+  }
+
+  function showBackpack() {
+    const spec = routeSpec();
+    const entries = routeEntries();
+    const store = routeStore();
+    const reached = ROUTE.filter((l) => routeDone(entries, l));
+    setChildren(mapScreen,
+      el('div', { className: 'play-hello' }, [
+        el('div', { className: 'play-hello-text' }, [
+          el('div', { className: 'play-kicker', textContent: `Full de ruta · ${spec.name}` }),
+          el('h2', { textContent: 'Què sé fer' }),
+          el('p', { className: 'play-note', textContent: 'Un nivell compta com a assolit quan hi tens algun pas a «Ja ho tens!». Això és el que ja pots portar al grup.' }),
+        ]),
+        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost'), button('🖨 Imprimeix', () => window.print(), 'ghost small')]),
+      ]),
+      el('div', { className: 'play-world' }, [
+        el('h3', { textContent: 'A la banda ja pots…' }),
+        reached.length ? el('ul', {}, reached.map((l) => el('li', { innerHTML: `<b>Nivell ${l.n} · ${l.titol}:</b> ${l.banda}` }))) : el('p', { className: 'play-note', textContent: 'Encara cap nivell amb un pas a «Ja ho tens!». Tria un pas del nivell 1 i comença.' }),
+      ]),
+      el('div', { className: 'play-world' }, [
+        el('h3', { textContent: 'Els passos' }),
+        el('div', { className: 'route-backpack' }, ROUTE.map((l) => el('div', { className: 'route-backpack-level' }, [
+          el('b', { textContent: `${l.n}. ${l.titol}` }),
+          ...entries.filter((e) => e.level === l).map((e) => el('div', { className: 'route-backpack-step' }, [el('span', { textContent: e.title }), routePill(store[e.key]?.best ?? null)])),
+        ]))),
+      ]),
+    );
+    toTop();
   }
 
   // ---- The shared library of the diagram generator ----------------------------------------------------
@@ -1953,6 +2483,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     stopSession();
     cancelAutoNext();
     mission = typeof index === 'object' ? { ...index, index: -1 } : { ...path.missions[index], index };
+    if (!mission.route) routeEntry = null;
+    pianoSound().setSound('piano');
     showKeys(mission.world?.twoHands ? TWO_HANDS_RANGE : [48, 84]);
     const worldIndex = path.worlds.indexOf(mission.world);
     mapScreen.hidden = true;
@@ -1963,6 +2495,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     refreshLevelPill();
     showScore(false);
     renderHud(worldIndex);
+    if (mission.route) {
+      const e = mission.route;
+      hud.replaceChildren(
+        el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Full de ruta · Nivell ${e.level.n} · ${e.level.titol}` }), el('strong', { textContent: e.title })]),
+        el('div', { className: 'play-hud-progress' }, [el('small', { textContent: e.text })]),
+      );
+    }
     updateStars();
     feedback = new Map();
     view = { marks: new Map(), message: '' };
@@ -2285,11 +2824,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const learnt = adaptive ? adaptiveResult(got, ratio, detail) : null;
     const band = got >= 1 ? raiseBandLevel(bandLevelOf(mission)) : null;
     // The student chooses how to go on (not in lessons, study cards or «El meu camí», which adapts by itself).
-    const choosing = !adaptive && !mission.study && mission.type !== 'lesson' && Boolean(retry);
+    // On the route («Full de ruta») the step's own assessment takes over below.
+    const choosing = !adaptive && !mission.study && mission.type !== 'lesson' && Boolean(retry) && !mission.route;
     if (choosing) settleChoice(mission.id, level);
     saveStore();
     updateStars();
     renderHud(path.worlds.indexOf(mission.world));
+    if (mission.route) return routeResult({ stars: got, ratio, retry, tips, text: [data, text].filter(Boolean).join(' '), gaps: plainGaps, notes: notes.filter(Boolean), options });
     const next = adaptive ? null : path.missions[mission.index + 1];
     const worldDone = next && next.world !== mission.world;
     const goNext = adaptive ? () => openAdaptive(adaptive.kit) : () => openMission(mission.index + 1);
@@ -4813,7 +5354,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       startPanel({
         kicker: TYPE_LABEL[type],
         title: mission.title,
-        text: `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}`,
+        text: `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}${mission.voice ? `<br>🎤 ${VOICE_TEXT[mission.voice]}` : ''}${mission.soundOf ? `<br>🎛 Sons: ${Object.entries(mission.soundOf).map(([part, snd]) => `${part === '*' ? 'tota la cançó' : part} → <b>${SOUNDS.find((x) => x.id === snd)?.name ?? snd}</b>`).join(' · ')}` : ''}`,
         list: cardLegend(cards),
         note: [
           note,
@@ -4985,7 +5526,46 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       });
     };
 
-    intro();
+    if (mission.sounds && !mission.soundOf) chooseSounds(intro);
+    else intro();
+  }
+
+  /** Level 3 of the route: a keyboard sound for each part of the song (or one for all). */
+  function chooseSounds(done) {
+    stopSession();
+    showScore(false);
+    showKeyboard(false);
+    const parts = mission.type === 'structure' ? [...new Set(mission.sections.map((sec) => sec.name))] : ['*'];
+    const picked = {};
+    parts.forEach((part, i) => { picked[part] = i % 2 ? 'orgue' : 'piano'; });
+    const rows = el('div', { className: 'route-sounds' });
+    const render = () => setChildren(rows, ...parts.map((part) => el('div', { className: 'route-sound-row' }, [
+      el('b', { textContent: part === '*' ? 'Tota la cançó' : part }),
+      el('div', { className: 'route-sound-chips' }, SOUNDS.map((snd) => {
+        const b = el('button', { type: 'button', className: `play-chip${picked[part] === snd.id ? ' on' : ''}`, textContent: snd.name, title: snd.hint });
+        b.addEventListener('click', () => {
+          picked[part] = snd.id;
+          pianoSound().setSound(snd.id);
+          playNotes(rootVoicing(splitProgression(mission.world.progression)[0]));
+          setTimeout(() => pianoSound().setSound('piano'), 1200);
+          render();
+        });
+        return b;
+      })),
+    ])));
+    render();
+    setPanel({
+      kicker: `Nivell 3 · Canviar els sons`,
+      title: mission.title,
+      text: `Tria un <b>so</b> per a cada part. Clica'n un per sentir-lo. ${parts.length > 1 ? 'Pensa quina part ha de sonar més plena (normalment la tornada) i quina més tranquil·la.' : 'Aquesta cançó no té parts: tria el so de tota la roda.'}`,
+      list: SOUNDS.map((snd) => `<b>${snd.name}</b>: ${snd.hint}`),
+      extra: rows,
+      buttons: [button('▶ Som-hi amb aquests sons', () => {
+        mission.soundOf = picked;
+        done();
+      }), button('Full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost')],
+    });
+    step = { space: () => { mission.soundOf = picked; done(); } };
   }
 
   /**
@@ -5317,6 +5897,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       const bar = bars[index];
       const kind = position.countIn ? (bars[0].kind === 'demo' ? 'demo' : 'count') : b >= bars.length ? 'end' : bar.kind;
       own.demo = kind === 'demo';
+      if (mission?.soundOf) pianoSound().setSound(mission.soundOf[bar.section] ?? mission.soundOf['*'] ?? 'piano');
       // The last bar of the example is already the count-in: no extra empty bar.
       const phase = kind === 'demo' && bar.lead && !position.countIn ? 'ready' : kind;
       if (phase !== own.phase) {
@@ -5695,6 +6276,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       view = { marks: new Map(), message: '' };
       const lines = readStats(stats);
       const done = challenge?.check ? challenge.check(closeStats(challengeStats, Math.max(1, bars - challengeFrom))) : null;
+      if (section === 'ruta' && routeEntry?.kind === 'improv') {
+        return routeResult({ lines: [challenge ? `<b>El repte:</b> ${challenge.text} ${done === false ? '(encara no del tot)' : challenge.ok}` : '', ...lines].filter(Boolean), retry: () => startImprov(song) });
+      }
       setPanel({
         kicker: 'Improvisa',
         title: challenge ? (done === false ? 'Gairebé!' : 'Fet!') : 'Molt bé!',

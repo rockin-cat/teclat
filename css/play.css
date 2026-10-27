@@ -3480,6 +3480,571 @@ button.play-hands-chip b {
   border-radius: 8px;
 }
 
+/* ---- Full de ruta (the poster) ---------------------------------------------------------------- */
+
+.route-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 14px;
+}
+
+.route-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.route-level {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--play-panel);
+  border: 2px solid var(--play-line);
+  border-radius: 18px;
+}
+
+.route-level.done {
+  border-color: var(--play-cyan);
+}
+
+.route-level-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.route-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #1d1d1f;
+  background: #fff;
+  border-bottom: 5px solid var(--play-cyan);
+  border-radius: 10px;
+}
+
+.route-level-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.route-level-text strong {
+  display: block;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.route-level-text small {
+  color: var(--play-muted);
+}
+
+.route-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.route-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--play-ink);
+  text-align: left;
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.route-step:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.route-step.lvl-ok {
+  border-color: rgb(53 179 107 / 60%);
+}
+
+.route-pill {
+  flex: none;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #1d1d1f;
+  background: rgb(255 255 255 / 25%);
+  border-radius: 999px;
+}
+
+.route-pill.lvl-none {
+  color: var(--play-muted);
+  background: transparent;
+  border: 1px solid var(--play-line);
+}
+
+.route-pill.lvl-no {
+  background: #ff9f43;
+}
+
+.route-pill.lvl-gairebe {
+  background: #ffd84d;
+}
+
+.route-pill.lvl-ok {
+  background: #35b36b;
+  color: #fff;
+}
+
+.route-band {
+  margin: 0;
+  font-size: 14px;
+  color: var(--play-muted);
+}
+
+.route-band.on {
+  color: var(--play-ink);
+}
+
+/* The assessment after a step */
+.route-assess h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: var(--play-muted);
+}
+
+.route-levels,
+.route-gaps,
+.route-choices,
+.route-sound-chips,
+.route-arrow-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.play-chip.lvl-no.on {
+  background: #ff9f43;
+  border-color: #ff9f43;
+  color: #1d1d1f;
+}
+
+.play-chip.lvl-gairebe.on {
+  background: #ffd84d;
+  border-color: #ffd84d;
+  color: #1d1d1f;
+}
+
+.play-chip.lvl-ok.on {
+  background: #35b36b;
+  border-color: #35b36b;
+  color: #fff;
+}
+
+.play-chip.small {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.route-tip {
+  margin: 6px 0 0;
+}
+
+.route-choice {
+  margin: 0;
+}
+
+.route-sounds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.route-sound-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.route-sound-row b {
+  min-width: 120px;
+}
+
+.route-arrows {
+  width: 180px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 26px;
+  letter-spacing: 0.2em;
+  color: var(--play-ink);
+  text-align: center;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 10px;
+}
+
+.route-arrow-keys {
+  margin: 8px 0;
+}
+
+.route-observations li,
+.route-history li {
+  margin-bottom: 6px;
+}
+
+.route-backpack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.route-backpack-level b {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.route-backpack-step {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 14px;
+  border-bottom: 1px dashed rgb(255 255 255 / 10%);
+}
+
+.play-song.on {
+  outline: 3px solid var(--play-cyan);
+}
+
+.home-door.classic .door-icon {
+  background: rgb(255 255 255 / 10%);
+}
+
+/* ---- The poster itself (Piano · Teclat · Full de ruta · Nivells) ------------------------------- */
+
+.poster {
+  --c: #1fb6e3;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 22px 16px;
+  color: #fff;
+  background: radial-gradient(120% 70% at 50% 0%, #1b2a40 0%, #0b1526 62%);
+  border: 8px solid var(--c);
+  border-radius: 8px;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 40%);
+}
+
+.poster-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 4px;
+}
+
+.poster-head.compact {
+  flex-direction: row;
+  justify-content: center;
+  gap: 14px;
+  padding: 0;
+}
+
+.poster-piano {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  width: 64px;
+  height: 64px;
+  padding: 0 6px 6px;
+  background: var(--c);
+  border-radius: 32px 32px 6px 6px;
+}
+
+.poster-head.compact .poster-piano {
+  width: 40px;
+  height: 40px;
+  padding: 0 4px 4px;
+  border-radius: 20px 20px 4px 4px;
+}
+
+.poster-piano i {
+  display: block;
+  width: 9px;
+  height: 22px;
+  background: #fff;
+  border-radius: 1px;
+}
+
+.poster-head.compact .poster-piano i {
+  width: 5px;
+  height: 13px;
+}
+
+.poster-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.95;
+  text-align: center;
+}
+
+.poster-head.compact .poster-title {
+  flex-direction: row;
+  gap: 10px;
+}
+
+.poster-w1 {
+  font-size: clamp(22px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.poster-w2 {
+  font-size: clamp(38px, 6vw, 64px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--c);
+  text-shadow: 0 0 24px rgb(31 182 227 / 45%);
+}
+
+.poster-head.compact .poster-w1,
+.poster-head.compact .poster-w2 {
+  font-size: 24px;
+  text-shadow: none;
+}
+
+.poster-sub {
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 6px;
+}
+
+.poster-song {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  font-size: 14px;
+  color: #c9d2de;
+}
+
+.poster-song b {
+  color: #fff;
+}
+
+.poster-song-chords {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.poster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ptile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  color: #fff;
+  text-align: left;
+  background: #141f33;
+  border: 2px solid #2a3850;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.ptile:hover,
+.ptile:focus-visible {
+  border-color: var(--c);
+  transform: translateY(-1px);
+}
+
+.ptile.done {
+  border-color: var(--c);
+}
+
+.ptile.cur {
+  box-shadow: 0 0 0 3px rgb(31 182 227 / 30%);
+}
+
+.ptile-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #1d1d1f;
+  background: #fff;
+  border-bottom: 6px solid var(--c);
+  border-radius: 10px;
+}
+
+.ptile-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ptile-text b {
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ptile-text small {
+  font-size: 13px;
+  line-height: 1.3;
+  color: #c9d2de;
+}
+
+.ptile-text em {
+  font-size: 12px;
+  font-style: normal;
+  color: #9aa4b2;
+}
+
+.pbar {
+  display: block;
+  height: 5px;
+  margin-top: 4px;
+  overflow: hidden;
+  background: #2a3850;
+  border-radius: 3px;
+}
+
+.pbar i {
+  display: block;
+  height: 100%;
+  background: var(--c);
+}
+
+.ptile-icon {
+  flex: none;
+  font-size: 24px;
+  color: var(--c);
+}
+
+.poster-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
+.poster-logo {
+  height: 26px;
+}
+
+.poster-foot em {
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 800;
+  color: var(--c);
+}
+
+.poster-level {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #141f33;
+  border: 2px solid var(--c);
+  border-radius: 14px;
+}
+
+.poster-level-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.poster-level-head b {
+  display: block;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+
+.poster-level-head small {
+  color: #c9d2de;
+}
+
+.poster .route-step {
+  color: #fff;
+  background: rgb(255 255 255 / 5%);
+}
+
+.route-step-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.route-step-text small {
+  font-size: 12.5px;
+  color: #9aa4b2;
+}
+
+.poster .route-band {
+  color: #c9d2de;
+}
+
+.poster .route-band.on {
+  color: #fff;
+}
+
+.route-hint {
+  margin: 12px 0 0;
+}
+
+@media (max-width: 640px) {
+  .poster-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .poster {
+    padding: 14px;
+    border-width: 5px;
+  }
+}
+
+
 /* Level of achievement: «En procés», «A prop», «Ja ho tens!» (no stars). */
 .play-panel.near {
   border-color: rgb(255 192 18 / 50%);
