@@ -251,6 +251,7 @@ function setView(next, section = 'juga') {
       playNotes,
       getLabels: () => shownLabels(),
       getHeld: () => new Set(notesDown.keys()),
+      hasMidi: () => ui.midiStatus.classList.contains('connected'),
       storage,
     });
     play.setKeyHooks(

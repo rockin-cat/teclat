@@ -36,7 +36,7 @@ import { contourCard, contourLabel, contourLegend, isContourName } from './conto
 import { ALL_STEPS, CHOICES, GAPS, NIVELLS, ROUTE, VOICE_TEXT, gapsFor, proposeLevel, suggestChoice } from './route.js';
 import { SOUNDS } from './piano-sound.js';
 import { LEVEL_NAMES, PATH_END_TEXT, isDone, levelBadge, levelOf as stepLevel } from './levels.js';
-import { CHOICES_MAX, CHOICES_MIN, CHOICE_NAMES, observeChoices, recentDecisions } from './choices.js';
+import { CHOICES_MAX, CHOICES_MIN, CHOICE_NAMES, mainObservation, observeChoices, recentDecisions } from './choices.js';
 
 const STORAGE_KEY = 'rockin.play.v1';
 const PATHS_KEY = 'rockin.play.paths';
@@ -156,7 +156,8 @@ function loadStore() {
   return store;
 }
 
-export function createPlay({ root, getCards, playNotes, getLabels, getHeld, storage }) {
+export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasMidi = () => false, storage }) {
+  const midiOn = () => { try { return Boolean(hasMidi()); } catch { return false; } };
   const store = loadStore();
   // The teacher can try everything as "Professor/a": all open, nothing saved.
   const TEACHER_ID = '__professor';
@@ -1284,6 +1285,26 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
 
   const routePill = (best) => el('span', { className: `route-pill lvl-${best ?? 'none'}`, textContent: best ? NIVELLS[best] : 'Per fer' });
   const routeDone = (entries, level) => entries.filter((e) => e.level === level).some((e) => routeBest(e.key) === 'ok');
+  /**
+   * Transfer, per level: the best percentage with the screen helping (any music
+   * step of the level) against the «com a l'assaig» step (cards and band only).
+   * The distance between the two is what the student still owes to the screen.
+   */
+  const routeTransfer = (entries, level) => {
+    const store = routeStore();
+    const mine = entries.filter((e) => e.level === level && e.mission);
+    const helped = Math.max(-1, ...mine.filter((e) => !e.step.rehearsal).map((e) => store[e.key]?.rBest ?? -1));
+    const alone = Math.max(-1, ...mine.filter((e) => e.step.rehearsal).map((e) => store[e.key]?.rBest ?? -1));
+    return { helped: helped < 0 ? null : helped, alone: alone < 0 ? null : alone };
+  };
+  const transferLine = (t) => {
+    if (t.helped === null && t.alone === null) return null;
+    const parts = [t.helped !== null ? `amb la pantalla: <b>${t.helped} %</b>` : '', t.alone !== null ? `com a l'assaig: <b>${t.alone} %</b>` : 'com a l\'assaig: encara no'];
+    const verdict = t.helped !== null && t.alone !== null
+      ? (t.alone >= t.helped - 10 ? ' · Això ja és teu, no de la pantalla.' : t.alone >= t.helped - 25 ? ' · S\'acosta: la pantalla encara hi ajuda una mica.' : ' · Sense la pantalla cau força: toca-ho més sense ajuda.')
+      : '';
+    return el('p', { className: 'route-transfer', innerHTML: `🎯 ${parts.filter(Boolean).join(' · ')}${verdict}` });
+  };
 
   let routeLevelOpen = null; // the level whose steps are shown (null: the poster)
 
@@ -1345,10 +1366,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
               el('span', { className: 'ptile-icon', textContent: level.icona }),
             ]),
             el('p', { className: `route-band${done ? ' on' : ''}`, innerHTML: `<b>A la banda${done ? ' ja' : ''} pots…</b> ${level.banda}` }),
+            transferLine(routeTransfer(entries, level)),
             el('div', { className: 'route-steps' }, mine.map((e) => {
               const best = routeBest(e.key);
-              const b = el('button', { type: 'button', className: `route-step lvl-${best ?? 'none'}` }, [
-                el('span', { className: 'route-step-text' }, [el('span', { className: 'route-step-title', textContent: e.title }), el('small', { textContent: e.text })]),
+              const b = el('button', { type: 'button', className: `route-step lvl-${best ?? 'none'}${e.step.rehearsal ? ' rehearsal' : ''}` }, [
+                el('span', { className: 'route-step-text' }, [el('span', { className: 'route-step-title', textContent: `${e.step.rehearsal ? '🎸 ' : ''}${e.title}` }), el('small', { textContent: e.text })]),
                 routePill(best),
               ]);
               b.addEventListener('click', () => openStep(e));
@@ -1439,6 +1461,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     if (entry.kind === 'improv') return routeImprov(entry);
     if (entry.kind === 'compose') return routeCompose(entry);
     const m = { ...entry.mission, route: entry };
+    if (step.rehearsal) m.rehearsal = true;
+    if (step.shuffle) m.shuffle = true;
     if (step.voice) m.voice = step.voice;
     if (step.sounds) m.sounds = step.sounds;
     openMission(m);
@@ -1450,11 +1474,68 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     return { prev: i > 0 ? entries[i - 1] : null, next: i >= 0 && i + 1 < entries.length ? entries[i + 1] : null };
   };
 
+  /** Icons and a short line for each option of «Què creus que necessites ara?». */
+  const CHOICE_LOOK = {
+    slower: { icon: '🐢', hint: 'Més a poc a poc, per assegurar-ho.' },
+    faster: { icon: '🐇', hint: 'Com el grup ho tocarà.' },
+    'help-on': { icon: '💡', hint: 'Una mica de suport i tornar-hi.' },
+    'help-off': { icon: '🙌', hint: 'Prova-ho sense suport.' },
+    part: { icon: '🎯', hint: 'Només el tros que falla.' },
+    repeat: { icon: '↻', hint: 'Igual que ara.' },
+    back: { icon: '←', hint: 'Un pas enrere per agafar base.' },
+    next: { icon: '→', hint: 'Endavant.' },
+    done: { icon: '🎸', hint: 'Ja no cal practicar-ho aquí.' },
+  };
   /**
-   * The end of a step: the game proposes a level, the student confirms or
-   * changes it, says what was missing and chooses what to do next («Què creus
-   * que necessites ara?»). The choice goes to the same list as in the classic
-   * path (st.choices), so «Com tries el teu camí» reads both alike, and it is
+   * «Què creus que necessites ara?» with three doors: repeat, change something
+   * (tempo, help, a piece, a step back: opens on demand) and move on. Fewer
+   * decisions in front, the same options behind.
+   */
+  function choiceGrid(list, onPick) {
+    const MAIN = ['repeat', 'next', 'done'];
+    const main = list.filter((o) => MAIN.includes(o.id));
+    const more = list.filter((o) => !MAIN.includes(o.id));
+    const box = el('div', { className: 'play-choices' });
+    const sub = el('div', { className: 'play-choices sub', hidden: true });
+    const tiles = [];
+    for (const o of main) {
+      if (o.id === 'next' || o.id === 'done') continue;
+      tiles.push(choiceTile(o, onPick));
+    }
+    if (more.length) {
+      const change = el('button', { type: 'button', className: 'play-choice change' }, [
+        el('span', { className: 'choice-icon', textContent: '🔧' }),
+        el('span', { className: 'choice-text' }, [el('b', { textContent: 'Canviar alguna cosa' }), el('small', { textContent: more.map((o) => (CHOICE_SHORT[o.id] ?? o.id)).join(' · ') })]),
+      ]);
+      change.addEventListener('click', () => {
+        sub.hidden = !sub.hidden;
+        change.classList.toggle('open', !sub.hidden);
+      });
+      tiles.push(change);
+    }
+    for (const o of main) if (o.id === 'next' || o.id === 'done') tiles.push(choiceTile(o, onPick));
+    setChildren(box, ...tiles);
+    setChildren(sub, ...more.map((o) => choiceTile(o, onPick)));
+    return el('div', { className: 'play-choice-groups' }, [box, sub]);
+  }
+  const CHOICE_SHORT = { slower: 'tempo', faster: 'tempo', 'help-on': 'ajuda', 'help-off': 'ajuda', part: 'un tros', back: 'un pas enrere' };
+  /** A choice as a tile (icon, label, short line). */
+  function choiceTile(opt, onPick) {
+    const look = CHOICE_LOOK[opt.id] ?? { icon: '•', hint: '' };
+    const b = el('button', { type: 'button', className: `play-choice ${opt.id}` }, [
+      el('span', { className: 'choice-icon', textContent: look.icon }),
+      el('span', { className: 'choice-text' }, [el('b', { textContent: opt.label }), look.hint ? el('small', { textContent: look.hint }) : null]),
+    ]);
+    b.dataset.choice = opt.id;
+    b.addEventListener('click', () => onPick(opt));
+    return b;
+  }
+
+  /**
+   * The end of a step: the game says the level reached and what was missing;
+   * the student only chooses what to do next («Què creus que necessites
+   * ara?»). The choice goes to the same list as in the classic path
+   * (st.choices), so «Com tries el teu camí» reads both alike, and it is
    * checked the next time the step is played.
    */
   function routeResult({ stars = null, ratio = null, retry = null, tips = [], text = '', lines = [], gaps: plainGaps = [], notes = [], options = [] }) {
@@ -1463,41 +1544,30 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     if (!entry || !st) return showMap();
     const missionId = mission?.id;
     const LV = ['no', 'gairebe', 'ok'];
-    const proposed = proposeLevel({ stars, ratio });
-    let level = proposed;
-    const gapList = gapsFor(entry.step, mission, entry.level);
-    const chosenGaps = new Set();
+    const judged = stars !== null || ratio !== null;
+    const level = proposeLevel({ stars, ratio });
+    const n = LV.indexOf(level);
     const store = routeStore();
     const before = store[entry.key];
     const routeP = `ruta:${routeSongId}`;
     const { prev, next } = routeNeighbours(entry);
     const helped = Boolean(helpBoost.get(missionId)) || mission?.help === 'shape';
-    const drop = tempoDrop.get(missionId) ?? 0;
     // What happened to the last choice that led here (the same step again, or the one it took the student to).
     st.choices ??= [];
     const settled = st.teacher ? null : [...st.choices].reverse().find((c) => c.choice && c.p === routeP);
-    const settles = Boolean(settled && settled.target === entry.key && (settled.nextLevel === undefined || settled.nextLevel === null));
-    const rec = st.teacher ? null : { t: Date.now(), m: entry.key, p: routeP, title: entry.title, level: LV.indexOf(level), choice: null, suggested: null, sl: null };
+    if (settled && settled.target === entry.key && (settled.nextLevel === undefined || settled.nextLevel === null)) settled.nextLevel = n;
+    store[entry.key] = { best: LV[Math.max(LV.indexOf(before?.best ?? 'no'), n)], last: level, tries: (before?.tries ?? 0) + 1, t: Date.now(), ...(ratio !== null ? { r: Math.round(ratio * 100), rBest: Math.max(before?.rBest ?? 0, Math.round(ratio * 100)) } : before?.rBest !== undefined ? { rBest: before.rBest } : {}) };
+    const gapText = plainGaps.join(' · ');
+    const rec = st.teacher ? null : { t: Date.now(), m: entry.key, p: routeP, title: entry.title, level: n, ...(gapText ? { gaps: gapText.slice(0, 90) } : {}), choice: null, suggested: null, sl: null };
     if (rec) {
       st.choices.push(rec);
       if (st.choices.length > CHOICES_MAX) st.choices.splice(0, st.choices.length - CHOICES_MAX);
     }
-    const save = () => {
-      store[entry.key] = { best: LV[Math.max(LV.indexOf(before?.best ?? 'no'), LV.indexOf(level))], last: level, tries: (before?.tries ?? 0) + 1, t: Date.now() };
-      if (rec) {
-        rec.level = LV.indexOf(level);
-        const gapText = [...chosenGaps].map((g) => GAPS[g].t).concat(plainGaps).join(' · ');
-        if (gapText) rec.gaps = gapText.slice(0, 90);
-        else delete rec.gaps;
-      }
-      if (settles) settled.nextLevel = LV.indexOf(level);
-      saveStore();
-    };
-    save();
+    saveStore();
 
     // The options: the mission's own (tempo, help: they do what they say), then the route's.
     const own = (id) => options.find((o) => o.id === id);
-    const list = () => [
+    const list = [
       own('slower') ?? own('faster'),
       own('help-on') ?? own('help-off'),
       retry || entry.kind ? { id: 'repeat', label: CHOICES.repeat, go: retry ?? (() => openStep(entry)) } : null,
@@ -1505,46 +1575,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       next ? { id: 'next', label: `${CHOICES.next}: ${next.title}`, to: next } : null,
       { id: 'done', label: CHOICES.done, to: null },
     ].filter(Boolean);
-    const suggested = () => {
-      const ids = new Set(list().map((o) => o.id));
-      const sug = suggestChoice({ level, gaps: [...chosenGaps], helped, canSlow: ids.has('slower'), canFast: ids.has('faster'), canHelp: ids.has('help-on'), hasPrev: Boolean(prev), hasNext: Boolean(next) });
-      return ids.has(sug) ? sug : 'repeat';
-    };
-    const noteSuggestion = () => {
-      if (!rec) return;
-      rec.suggested = suggested();
-      rec.sl = list().find((o) => o.id === rec.suggested)?.label ?? null;
-    };
-    noteSuggestion();
-
-    const levelChips = el('div', { className: 'route-levels' });
-    const gapChips = el('div', { className: 'route-gaps' });
-    const choiceBox = el('div', { className: 'play-choices' });
-    const tipBox = el('p', { className: 'play-note route-tip' });
-    const renderLevels = () => setChildren(levelChips, ...LV.map((k, n) => {
-      const b = el('button', { type: 'button', className: `play-chip lvl-${k}${level === k ? ' on' : ''}`, textContent: LEVEL_NAMES[n] });
-      b.addEventListener('click', () => {
-        level = k;
-        save();
-        noteSuggestion();
-        renderLevels();
-      });
-      return b;
-    }));
-    const renderGaps = () => {
-      setChildren(gapChips, ...gapList.map((g) => {
-        const b = el('button', { type: 'button', className: `play-chip small${chosenGaps.has(g) ? ' on' : ''}`, textContent: GAPS[g].t });
-        b.addEventListener('click', () => {
-          if (chosenGaps.has(g)) chosenGaps.delete(g);
-          else chosenGaps.add(g);
-          save();
-          noteSuggestion();
-          renderGaps();
-        });
-        return b;
-      }));
-      tipBox.innerHTML = [...chosenGaps].slice(0, 2).map((g) => `💡 ${GAPS[g].tip}`).join('<br>');
-    };
+    if (rec) {
+      const ids = new Set(list.map((o) => o.id));
+      const sug = suggestChoice({ level, gaps: [], helped, canSlow: ids.has('slower'), canFast: ids.has('faster'), canHelp: ids.has('help-on'), hasPrev: Boolean(prev), hasNext: Boolean(next) });
+      rec.suggested = ids.has(sug) ? sug : 'repeat';
+      rec.sl = list.find((o) => o.id === rec.suggested)?.label ?? null;
+      saveStore();
+    }
     const act = (opt) => {
       cancelAutoNext();
       if (rec) {
@@ -1558,42 +1595,31 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       screen = 'ruta';
       showMap();
     };
-    setChildren(choiceBox, ...list().map((opt) => {
-      const b = el('button', { type: 'button', className: 'play-choice', textContent: opt.label });
-      b.dataset.choice = opt.id;
-      b.addEventListener('click', () => act(opt));
-      return b;
-    }));
-    renderLevels();
-    renderGaps();
     const measure = ratio !== null && !text ? `${Math.round(ratio * 100)} % de compassos nets.` : '';
-    const info = [...plainGaps, ...tips, ...notes];
+    const seen = [...plainGaps, ...(plainGaps.length ? [] : tips), ...notes].filter(Boolean).slice(0, 3);
+    const big = judged
+      ? [el('div', { className: 'play-result-level' }, [levelBadge(stars ?? (ratio >= 0.9 ? 3 : ratio >= 0.7 ? 2 : 0)), el('span', { innerHTML: [measure, mission?.type !== 'lesson' ? text : ''].filter(Boolean).join(' ') })])]
+      : [el('div', { className: 'play-result-level' }, [el('span', { className: 'level-badge l1', textContent: 'Fet' }), text ? el('span', { innerHTML: text }) : null])];
     setPanel({
       kicker: `Nivell ${entry.level.n} · ${entry.level.titol} · ${entry.title}`,
-      title: LEVEL_NAMES[LV.indexOf(level)],
-      text: [measure, text && mission?.type !== 'lesson' ? text : ''].filter(Boolean).join(' '),
+      title: entry.title,
+      big,
       list: lines,
-      extra: el('div', { className: 'route-assess' }, [
-        el('h4', { textContent: 'Com ha anat? (el joc en proposa un; canvia\'l si no hi estàs d\'acord)' }),
-        levelChips,
-        gapList.length ? el('h4', { textContent: 'Què t\'ha faltat? (pots marcar-ne més d\'un, o cap)' }) : null,
-        gapChips,
-        tipBox,
-        el('div', { className: 'play-result-block choose' }, [
-          el('h3', { textContent: 'Què creus que necessites ara?' }),
-          choiceBox,
-        ]),
+      extra: el('div', { className: 'play-result-block choose route-choose' }, [
+        el('h3', { textContent: 'Què creus que necessites ara?' }),
+        choiceGrid(list, act),
       ]),
-      side: info.length ? [el('div', { className: 'play-result-block gaps' }, [
-        el('h3', { textContent: level === 'ok' ? 'Per polir' : 'El que s\'ha vist' }),
-        el('ul', { className: 'play-tips' }, info.map((t) => el('li', { innerHTML: t }))),
+      side: seen.length ? [el('div', { className: 'play-result-block gaps' }, [
+        el('h3', { textContent: n === 2 ? 'Per polir' : 'Què t\'ha faltat' }),
+        el('ul', { className: 'play-tips' }, seen.map((t) => el('li', { innerHTML: t }))),
       ])] : null,
       buttons: [button('Full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost')],
-      tone: level === 'ok' ? 'good' : level === 'gairebe' ? 'near' : 'progress',
+      tone: !judged || n === 2 ? 'good' : n === 1 ? 'near' : 'progress',
     });
-    if (level === 'ok') sfx.good();
-    else if (level === 'gairebe') sfx.ok();
-    step = { escape: () => { screen = 'ruta'; showMap(); }, space: () => { const r = list().find((o) => o.id === 'repeat'); if (r) act(r); } };
+    if (!judged || n === 2) sfx.good();
+    else if (n === 1) sfx.ok();
+    if (n === 2) confetti();
+    step = { escape: () => { screen = 'ruta'; showMap(); }, space: () => { const r = list.find((o) => o.id === 'repeat'); if (r) act(r); } };
   }
 
   /** Improvisation steps: the Improvisa engine, then the same assessment. */
@@ -1718,6 +1744,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         el('div', { className: 'route-backpack' }, ROUTE.map((l) => el('div', { className: 'route-backpack-level' }, [
           el('b', { textContent: `${l.n}. ${l.titol}` }),
           ...entries.filter((e) => e.level === l).map((e) => el('div', { className: 'route-backpack-step' }, [el('span', { textContent: e.title }), routePill(store[e.key]?.best ?? null)])),
+          transferLine(routeTransfer(entries, l)),
         ]))),
       ]),
     );
@@ -2209,6 +2236,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         ownKeyboardBox(() => showTeacher()),
         el('p', { className: 'play-note', innerHTML: 'La <b>Sessió</b> (progressions lliures i reptes per treballar a classe) és a la portada: <b>⌂ Inici → Sessió</b>.' }),
       ]),
+      routeSummary(),
       adaptiveSummary(),
       ...[ROCKIN_PATH, handsPath(ROCKIN_PATH, 'chord'), handsPath(ROCKIN_PATH, 'bass'), WORKSHOP_PATH, ...bookSpecs.filter((spec) => Object.values(store.students).some((st) => st.log.some((e) => e.p === spec.id))), ...customSpecs].map((spec) => {
         if (spec.worlds) return spec;
@@ -2239,6 +2267,38 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     );
     step = null;
     toTop();
+  }
+
+  /**
+   * The route, per student: levels with a step at «Ja ho tens!», the best
+   * percentage with the screen helping and «com a l'assaig» (transfer), and
+   * the main tendency of their choices.
+   */
+  function routeSummary() {
+    const rows = Object.entries(store.students).filter(([, st]) => st.route && Object.keys(st.route).length);
+    if (!rows.length) return null;
+    const pct = (list, test) => Math.max(-1, ...list.filter(test).map((x) => x.rBest ?? -1));
+    const text = (v) => (v < 0 ? '—' : `${v} %`);
+    return el('div', { className: 'play-world' }, [
+      el('h3', { textContent: 'Full de ruta: què és seu i què és de la pantalla' }),
+      el('p', { className: 'play-note', textContent: 'Per cada alumne: nivells del pòster amb algun pas a «Ja ho tens!», el millor percentatge amb la pantalla ajudant i el millor als passos «com a l\'assaig» (només cartes i banda). Si la distància entre els dos no es tanca amb les setmanes, l\'alumne està aprenent a jugar al joc, no a tocar.' }),
+      el('table', { className: 'teacher-table' }, [
+        el('thead', {}, [el('tr', {}, ['Alumne', 'Cançons', 'Nivells assolits', 'Amb pantalla', 'Com a l\'assaig', 'Com tria'].map((t) => el('th', { textContent: t })))]),
+        el('tbody', {}, rows.map(([, st]) => {
+          const steps = Object.values(st.route).flatMap((song) => Object.entries(song).map(([key, v]) => ({ key, ...v })));
+          const isRehearsal = (x) => /^\d+z$/.test(x.key);
+          const levels = new Set(steps.filter((x) => x.best === 'ok').map((x) => parseInt(x.key, 10)).filter((n) => n > 0));
+          return el('tr', {}, [
+            el('td', { textContent: st.name }),
+            el('td', { textContent: String(Object.keys(st.route).length) }),
+            el('td', { textContent: levels.size ? [...levels].sort((a, b) => a - b).join(', ') : '—' }),
+            el('td', { textContent: text(pct(steps, (x) => !isRehearsal(x))) }),
+            el('td', { textContent: text(pct(steps, isRehearsal)) }),
+            el('td', { textContent: mainObservation(st.choices ?? []) || '—' }),
+          ]);
+        })),
+      ]),
+    ]);
   }
 
   /** What each student knows in the adaptive path (ROCKIN and every song with data). */
@@ -2547,8 +2607,30 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
   // `keysManual` (the 🎹 button) overrides it for the session.
   let keysManual = null;
   const bandStep = () => (isTeacher() ? 0 : me()?.band ?? 0);
+  /**
+   * Fading: how much the screen helps on a mission, from what the student has
+   * already reached on it, so the help goes away by itself.
+   *   0  everything: lit keys (when the mission has them), the ball on every
+   *      circle, marks while playing.
+   *   1  «A prop» reached: no lit keys; the ball only marks the first beat of
+   *      each bar; the marks come at the end.
+   *   2  «Ja ho tens!» reached: no ball; the cards and the band, nothing else.
+   *   3  «com a l'assaig»: as 2, and no keyboard, no colours, no degrees.
+   * «Posar ajuda» (helpBoost) brings everything back for that try.
+   */
+  const aidStage = (m = mission) => {
+    if (!m) return 0;
+    if (m.rehearsal) return 3;
+    if (helpBoost.get(m.id)) return 0;
+    if (isTeacher()) return 0;
+    if (m.route) return ['no', 'gairebe', 'ok'].indexOf(routeBest(m.route.key) ?? 'no');
+    return stepLevel(triedOf(m.id));
+  };
   const keysWanted = (helpMode) => {
+    if (mission?.rehearsal) return false;
     if (keysManual !== null) return keysManual;
+    // With a MIDI keyboard and nothing to paint, the screen keyboard only distracts.
+    if (helpMode !== 'shape' && midiOn() && aidStage() >= 1) return false;
     return helpMode === 'shape' || bandStep() < 3;
   };
   // One card for the whole wheel was tried (band level 4) and it did not read
@@ -2916,12 +2998,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       };
       chooser = el('div', { className: 'play-result-block choose' }, [
         el('h3', { textContent: 'Què creus que necessites ara?' }),
-        el('div', { className: 'play-choices' }, list.map((opt) => {
-          const b = el('button', { type: 'button', className: 'play-choice', textContent: opt.label });
-          b.dataset.choice = opt.id;
-          b.addEventListener('click', () => choose(opt));
-          return b;
-        })),
+        choiceGrid(list, choose),
       ]);
       if (finishedNow) advice = `<b>${PATH_END_TEXT}</b>`;
       buttons = [button('Mapa', showMap, 'ghost')];
@@ -3480,11 +3557,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
 
   function stepsMission() {
     const world = mission.world;
-    const symbols = [...mission.chords, ...mission.chords];
+    // «Acords barrejats»: each round in a different order (and none painted), so
+    // the chords are retrieved on their own, not as a chain.
+    const shuffled = () => [...mission.chords].sort(() => Math.random() - 0.5);
+    const symbols = mission.shuffle ? [...shuffled(), ...shuffled(), ...shuffled()] : [...mission.chords, ...mission.chords];
     const two = Boolean(world.twoHands);
     const voicings = two ? symbols.map(rightHandVoicing) : chainFor(symbols, world, 2);
     const pass = mission.chords.length;
-    const items = symbols.map((chord, k) => ({ chord, notes: voicings[k], left: two ? leftHandVoicing(chord, leftMode()) : null, painted: k < pass }));
+    const items = symbols.map((chord, k) => ({ chord, notes: voicings[k], left: two ? leftHandVoicing(chord, leftMode()) : null, painted: !mission.shuffle && k < pass }));
     setFocus('both');
     const start = () => runSteps({
       items,
@@ -3498,14 +3578,18 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         title: 'Roda feta!',
         gaps,
         focus,
-        text: `Dues voltes a la roda: la primera amb ajuda i la segona de memòria. ${mistakes || hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`,
+        text: mission.shuffle
+          ? `Tres voltes en ordres diferents, de memòria. ${mistakes || hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`
+          : `Dues voltes a la roda: la primera amb ajuda i la segona de memòria. ${mistakes || hints ? `${mistakes} errada${mistakes === 1 ? '' : 'es'} i ${hints} ${hints === 1 ? 'pista' : 'pistes'}.` : 'Cap errada!'}`,
         retry: () => again(),
       }),
     });
     startPanel({
       kicker: `${TYPE_LABEL.steps} · ${world.title}`,
       title: mission.title,
-      text: `Tota la roda, acord per acord, sense música: <b>el joc t'espera</b> fins que toques l'acord bé. La primera volta tens les tecles pintades; la segona, de memòria. Fixa't en el <b>gest</b> de la mà entre acords.`,
+      text: mission.shuffle
+        ? 'Els acords de la roda, <b>en un ordre diferent a cada volta</b> i sense tecles pintades: el joc t\'espera fins que toques l\'acord bé. Tres voltes.'
+        : `Tota la roda, acord per acord, sense música: <b>el joc t'espera</b> fins que toques l'acord bé. La primera volta tens les tecles pintades; la segona, de memòria. Fixa't en el <b>gest</b> de la mà entre acords.`,
       start,
     });
     // Preview of the score before starting.
@@ -5225,6 +5309,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const baseTempo = Math.round((mission.tempo ?? speed.tempo) * (mission.tempo ? speed.tempo / 76 : 1) * (meter.compound ? 0.8 : 1));
     const help = type === 'pattern' ? mission.help : 'none';
     const tempoNow = () => Math.max(44, baseTempo - (tempoDrop.get(mission.id) ?? 0));
+    const rehearsal = Boolean(mission.rehearsal);
+    // From the second poster level on (or once a mission is «A prop»), only the C is named on the keys.
+    mission.keyNames = !(rehearsal || (mission.route?.level?.n ?? 1) >= 2 || (level !== 1 && aidStage() >= 1));
 
     // The bars to play, in rows: one card per row, each row a whole wheel (or 4 bars).
     const rowsOf = [];
@@ -5253,8 +5340,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       const oneNote = level === 1 || new Set(progression).size === 1;
       if (rowsOf.length === 1 && rowsOf[0].bars.length <= 8 && !oneNote) {
         const row = rowsOf[0];
-        row.repeat = 2;
-        for (const b of [...row.bars]) playBars.push({ ...playBars[b], repeatOf: b });
+        // From poster level 3 on, the grain grows: four times round (16 bars), as in a song.
+        row.repeat = (mission.route?.level?.n ?? 1) >= 3 && rowsOf[0].bars.length <= 4 ? 4 : 2;
+        for (let r = 1; r < row.repeat; r++) for (const b of [...row.bars]) playBars.push({ ...playBars[b], repeatOf: b });
       }
     }
     // One card per wheel: when every bar of a row uses the same card, an
@@ -5274,7 +5362,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     playBars.forEach((bar, b) => {
       const previous = playBars[b - 1];
       bar.name = level === 1 ? SOLFEGE[parseChord(bar.chord).root] : chordName(bar.chord);
-      if (level !== 1) Object.assign(bar, colourOf(bar.chord));
+      // As on the paper cards: the chord written above, and from «A prop» on no degree (I, V, vi…); «com a l'assaig», no colour either.
+      if (level !== 1 && !rehearsal) {
+        Object.assign(bar, colourOf(bar.chord));
+        if (aidStage() >= 1) delete bar.degree;
+      }
       bar.tag = !previous ? '' : previous.card !== bar.card ? 'carta nova' : '';
     });
     const two = Boolean(world.twoHands);
@@ -5340,7 +5432,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       // Two hands: the first chord is always painted on the start screen, as a
       // reference for which octave each hand goes to (during the try it is only
       // painted when the mission gives help).
-      view = { marks: help !== 'shape' && !two ? new Map() : two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : level === 5 ? contourMarks({ notes: rootVoicing(playBars[0].chord), symbol: 'start' }) : shapeMarks(voicings[0]), message: '' };
+      view = { marks: helpFor() !== 'shape' && !two ? new Map() : two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : level === 5 ? contourMarks({ notes: rootVoicing(playBars[0].chord), symbol: 'start' }) : shapeMarks(voicings[0]), message: '' };
       const drop = tempoDrop.get(mission.id) ?? 0;
       const tried = me()?.log.some((e) => e.m === mission.id && e.p === path.id);
       const boosted = helpFor() === 'shape' && help !== 'shape';
@@ -5350,28 +5442,42 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       missionScreen.classList.toggle('small-keys', keysManual === null && bandStep() === 2 && helpFor() !== 'shape');
       hudRefresh();
       if (boosted) view = { marks: two ? handMarks(voicings[0], leftVoicings[0], { symbol: playBars[0].chord }) : level === 3 ? melodicMarks(playBars[0].chord, playBars[0].card) : level === 5 ? contourMarks({ notes: rootVoicing(playBars[0].chord), symbol: 'start' }) : shapeMarks(voicings[0]), message: '' };
+      const stage = aidStage();
+      const fadedNote = rehearsal
+        ? '<b>Com a l\'assaig:</b> només les cartes i la banda. El joc t\'escolta i t\'ho diu al final.'
+        : stage === 2 ? 'Ja ho tens: sense pilota. Les cartes i la banda, com a l\'assaig.'
+          : stage === 1 ? 'Estàs a prop: la pilota només marca el primer temps i el resultat surt al final.' : '';
+      // The whole explanation the first time; afterwards one line and a short count.
+      const brief = tried && !mission.voice && !mission.soundOf;
       startPanel({
         kicker: TYPE_LABEL[type],
         title: mission.title,
-        text: `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}${mission.voice ? `<br>🎤 ${VOICE_TEXT[mission.voice]}` : ''}${mission.soundOf ? `<br>🎛 Sons: ${Object.entries(mission.soundOf).map(([part, snd]) => `${part === '*' ? 'tota la cançó' : part} → <b>${SOUNDS.find((x) => x.id === snd)?.name ?? snd}</b>`).join(' · ')}` : ''}`,
-        list: cardLegend(cards),
+        text: brief ? what : `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}${mission.voice ? `<br>🎤 ${VOICE_TEXT[mission.voice]}` : ''}${mission.soundOf ? `<br>🎛 Sons: ${Object.entries(mission.soundOf).map(([part, snd]) => `${part === '*' ? 'tota la cançó' : part} → <b>${SOUNDS.find((x) => x.id === snd)?.name ?? snd}</b>`).join(' · ')}` : ''}`,
+        list: brief ? [] : cardLegend(cards),
         note: [
           note,
+          fadedNote,
           drop ? 'Aquesta vegada anirà <b>més a poc a poc</b>.' : '',
           boosted ? 'I les <b>tecles s\'il·luminen</b> per ajudar-te; quan et surti, després del resultat pots treure l\'ajuda.' : '',
-          help === 'shape' || boosted ? '' : 'Mira les cartes, no el teclat.',
+          help === 'shape' || boosted || brief ? '' : 'Mira les cartes, no el teclat.',
         ].filter(Boolean).join('<br>'),
-        seconds: 7,
-        start: () => play(canListen && !multi),
+        seconds: brief ? 4 : 7,
+        // Listening first only the first time and while the help is still on: afterwards it is an option, not the default.
+        start: () => play(canListen && !multi && !tried && stage === 0 && !rehearsal),
         buttons: [
-          canListen && tried && !multi ? button('Sense escoltar', () => play(false), 'ghost small') : null,
-          canListen && multi ? button('♪ Primer escolta-les totes', () => play('all'), 'ghost small') : null,
+          canListen && !multi && (tried || stage > 0) && !rehearsal ? button('♪ Escolta-la primer', () => play(true), 'ghost small') : null,
+          canListen && !tried && stage === 0 && !multi ? button('Sense escoltar', () => play(false), 'ghost small') : null,
+          canListen && multi && !rehearsal ? button('♪ Primer escolta-les totes', () => play('all'), 'ghost small') : null,
         ],
       });
     };
 
     /** After a missed try the keys light up again ("si t'equivoques, t'ajuda"). */
-    const helpFor = () => (help === 'none' && helpBoost.get(mission.id) ? 'shape' : help);
+    const helpFor = () => {
+      if (helpBoost.get(mission.id)) return 'shape';
+      if (aidStage() >= 1) return 'none'; // «A prop» reached: the keys stop lighting up
+      return help;
+    };
 
     const play = (listenFirst) => {
       // Listening to everything ('all'): the piano plays every card of the try on
@@ -5450,6 +5556,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         help: helpFor(),
         voicings: allVoicings,
         hands: two ? { left: mode, leftVoicings: allLeft } : null,
+        aid: aidStage(),
         onPhase: statusFor,
         onEnd: ({ results, stats }) => {
           const clean = results.filter((r) => r.clean).length;
@@ -5694,10 +5801,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
    * Calls onPhase('count' | 'demo' | 'ready' | 'play' | 'end') and
    * onEnd({ results, stats }) with one result per played bar.
    */
-  async function runMusic({ bars, rows, columns, level, meter: meterText = '4/4', style = 'rock', tempo = speed.tempo, help = 'none', voicings = null, hands = null, onPhase, onEnd }) {
+  async function runMusic({ bars, rows, columns, level, meter: meterText = '4/4', style = 'rock', tempo = speed.tempo, help = 'none', voicings = null, hands = null, aid = 0, onPhase, onEnd }) {
     // hands: { left: 'chord' | 'bass', leftVoicings } for two-hand cards (voicings = right hand).
+    // aid: see aidStage(); 0 = ball on every circle and live marks, 1 = ball on
+    // the first beat and marks at the end, 2+ = no ball (the count-in stays).
     stopLounge();
     stopSession();
+    let reveal = aid === 0; // marks shown while playing, or only at the end
     const meter = parseTimeSignature(meterText);
     showScore(true, level !== 0 && bars.some((x) => x.kind === 'play'));
     score.setBars(bars, { rows, columns, meterPulses: meter.pulses });
@@ -5867,6 +5977,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       },
     };
     session = own;
+    missionScreen.classList.add('in-music');
+    document.body.classList.add('music-on');
+    missionScreen.classList.toggle('faded', aid >= 1);
     const grace = (GRACE_MS / 1000) * transport.ticksPerSecond;
     let position = transport.positionAt();
 
@@ -5878,10 +5991,16 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
         if (p.countIn) return { bar: 0, f: 0, inPlace: p.pulseFraction, count: String(p.pulse + 1) };
         if (p.bar >= bars.length) return null;
         if (bars[p.bar].kind === 'ready') return { bar: p.bar, f: 0, inPlace: p.pulseFraction, count: String(p.pulse + 1) };
+        if (aid >= 1 && bars[p.bar].kind === 'play') {
+          // Faded: a short bounce on the first beat of the bar, then nothing (2+: nothing at all).
+          if (aid >= 2 || p.pulse > 0) return null;
+          return { bar: p.bar, f: 0 };
+        }
         return { bar: p.bar, f: p.barFraction };
       },
       data: (b) => {
         if (bars[b]?.kind !== 'play') return {};
+        if (!reveal) return { onsets: [], marks: [] };
         const live = session === own && b >= own.shownBar - 1;
         const onsets = review.onsets.get(b) ?? (live ? evaluator.markersForBar(b).map((o) => o.status) : []);
         const onsetsLeft = hands ? review.left.get(b) ?? (live ? evaluator.markersLeft(b).map((o) => o.status) : []) : null;
@@ -5946,7 +6065,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
           review.onsets.set(own.done, evaluator.markersForBar(own.done).map((o) => o.status));
           if (hands) review.left.set(own.done, evaluator.markersLeft(own.done).map((o) => o.status));
           results[k].clean = results[k].misses === 0 && results[k].hits > 0;
-          score.setStatus(own.done, results[k].clean ? 'ok' : 'miss');
+          // Faded: the verdict of each bar waits for the end too.
+          if (reveal) score.setStatus(own.done, results[k].clean ? 'ok' : 'miss');
           score.touch(own.done);
         } else {
           score.setStatus(own.done, 'past');
@@ -5956,6 +6076,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       if (own.done >= bars.length) {
         stopSession({ natural: true });
         // Show the played cards, with their marks, from the top.
+        if (!reveal) {
+          reveal = true;
+          bars.forEach((bar, k) => {
+            const r = playIndex[k] !== undefined ? results[playIndex[k]] : null;
+            if (r) score.setStatus(k, r.clean ? 'ok' : 'miss');
+            score.touch(k);
+          });
+        }
         score.setCurrent(bars.findIndex((x) => x.kind === 'play'));
         score.setCurrent(-1);
         onEnd?.({ results, stats });
@@ -6001,6 +6129,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const { transport, backing } = session;
     const own = session;
     session = null;
+    missionScreen.classList.remove('in-music');
+    document.body.classList.remove('music-on');
     transport.dispose();
     if (!natural) backing.silence();
     setTimeout(() => backing.dispose(), 3000);
@@ -6432,7 +6562,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
       labels: getLabels(),
       marks: view.marksFn ? view.marksFn(performance.now()) : view.marks,
       message: view.message,
-      names: view.names ?? names,
+      names: view.names ?? (mission?.keyNames === false ? false : names),
       lane: false,
       now: demoRunning ? view.now : null,
       window: view.window ?? 1,

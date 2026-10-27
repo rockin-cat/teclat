@@ -23,7 +23,9 @@ export const ROUTE = [
       { id: '1b', titol: 'La roda pas a pas', text: 'Un acord darrere l\'altre, amb les tecles pintades i després de memòria. El joc t\'espera.', mid: 'l:steps' },
       { id: '1c', titol: 'La roda amb música', text: 'Un acord llarg per compàs, amb la banda.', mid: 'l:long' },
       { id: '1d', titol: 'La roda de memòria', text: 'Dues voltes sense tecles pintades.', mid: 'l:goal' },
+      { id: '1x', titol: 'Acords barrejats', text: 'La roda pas a pas, però cada volta en un ordre diferent: així els acords no depenen de l\'ordre.', mid: 'l:steps', shuffle: true },
       { id: '1e', titol: 'La roda a tempo', text: 'La roda com a la cançó, a cada temps.', mid: 's:0' },
+      { id: '1z', titol: 'Com a l\'assaig', text: 'La roda a tempo només amb les cartes: sense teclat, sense pilota. El joc t\'escolta i t\'ho diu al final.', mid: 's:0', rehearsal: true },
     ],
   },
   {
@@ -39,6 +41,7 @@ export const ROUTE = [
       { id: '2d', titol: 'Tres cartes seguides', text: 'Tres cartes diferents sobre la roda.', mid: 't:3' },
       { id: '2e', titol: 'Cartes més difícils', text: 'Contratemps i rodones partides.', mid: 's:1' },
       { id: '2f', titol: 'Toca amb la banda', text: 'La banda no s\'atura: si t\'equivoques, torna a entrar.', mid: 't:4' },
+      { id: '2z', titol: 'Com a l\'assaig', text: 'Tres cartes seguides només amb les cartes i la banda; el resultat, al final.', mid: 't:3', rehearsal: true },
     ],
   },
   {
@@ -50,6 +53,7 @@ export const ROUTE = [
     passos: [
       { id: '3a', titol: 'Dos sons: estrofa i tornada', text: 'Un so per a cada part. Escolta com canvia la cançó quan canvia el so.', mid: 'structure', sounds: 2 },
       { id: '3b', titol: 'Tria el so de cada part', text: 'Decideix tu el so de totes les parts i toca la cançó sencera.', mid: 'structure', sounds: 'all' },
+      { id: '3z', titol: 'Com a l\'assaig', text: 'La cançó sencera, part per part, només amb les cartes i la banda.', mid: 'structure', rehearsal: true },
     ],
   },
   {
@@ -77,6 +81,7 @@ export const ROUTE = [
       { id: '5c', titol: 'Baix i acord amb silencis', text: 'La carta amb rodona blanca, a dues mans.', from: 'bass', mid: 't:2' },
       { id: '5d', titol: 'Cada mà el seu ritme', text: 'Fila blava per a la dreta, taronja per a l\'esquerra.', from: 'bass', world: 'mans-ritmes', at: 0 },
       { id: '5e', titol: 'Mans alternades', text: 'Dreta, esquerra, dreta, esquerra dins del mateix temps.', from: 'bass', world: 'mans-dificil', at: 0 },
+      { id: '5z', titol: 'Com a l\'assaig', text: 'Baix i acord amb silencis, a dues mans, només amb les cartes i la banda.', from: 'bass', mid: 't:2', rehearsal: true },
     ],
   },
   {
@@ -91,6 +96,7 @@ export const ROUTE = [
       { id: '6c', titol: 'Dues notes repetides', text: 'La línia plana és la mateixa nota.', mid: 'arp:3' },
       { id: '6d', titol: 'Tres notes', text: 'Una carta de tres alçades.', mid: 'arp:4' },
       { id: '6e', titol: 'Tres cartes melòdiques', text: 'Tres cartes diferents sobre la roda.', mid: 'arp:repte' },
+      { id: '6z', titol: 'Com a l\'assaig', text: 'Tres cartes melòdiques només amb les cartes i la banda.', mid: 'arp:repte', rehearsal: true },
     ],
   },
   {
@@ -104,6 +110,7 @@ export const ROUTE = [
       { id: '7b', titol: 'La roda a prop, pas a pas', text: 'Cada acord a la posició més propera.', mid: 'i:steps' },
       { id: '7c', titol: 'La roda a prop amb música', text: 'Amb la banda i les tecles pintades.', mid: 'i:long' },
       { id: '7d', titol: 'Inversions amb la banda', text: 'Quatre cartes, cada acord a prop.', mid: 'i:band' },
+      { id: '7z', titol: 'Com a l\'assaig', text: 'Quatre cartes amb inversions, només amb les cartes i la banda.', mid: 'i:band', rehearsal: true },
     ],
   },
   {
@@ -117,6 +124,7 @@ export const ROUTE = [
       { id: '8b', titol: 'Appoggiatura', text: 'Una nota veïna que es recolza i torna a la de l\'acord.', mid: 'con:2' },
       { id: '8c', titol: 'Salts i passos', text: 'Un salt de tercera i tornar per graus.', mid: 'con:9' },
       { id: '8d', titol: 'Tres girs seguits', text: 'Tres cartes de fletxes sobre la roda.', mid: 'con:repte' },
+      { id: '8z', titol: 'Com a l\'assaig', text: 'Tres girs seguits només amb les cartes i la banda.', mid: 'con:repte', rehearsal: true },
       { id: '8e', titol: 'Glissando', text: 'Llisca amb el dors de la mà per les tecles blanques fins a caure a la fonamental del primer temps de cada roda.', mid: 't:0', voice: 'gliss' },
     ],
   },

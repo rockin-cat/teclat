@@ -4284,3 +4284,161 @@ body.play-theme .level-badge.l2 {
   margin-top: 16px;
   max-width: 520px;
 }
+
+/* «Què creus que necessites ara?» as tiles: icon, option, short line (route and classic path alike). */
+.play-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.play-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: auto;
+  min-height: 118px;
+  padding: 14px 14px 12px;
+  font-weight: 600;
+  background: rgb(255 255 255 / 4%);
+  border: 2px solid rgb(255 255 255 / 14%);
+  border-radius: 16px;
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+
+.play-choice:hover,
+.play-choice:focus-visible {
+  background: rgb(54 197 240 / 12%);
+  border-color: var(--play-cyan);
+  transform: translateY(-2px);
+}
+
+.play-choice .choice-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  line-height: 1;
+  background: rgb(255 255 255 / 8%);
+  border-radius: 12px;
+}
+
+.play-choice.next .choice-icon,
+.play-choice.done .choice-icon {
+  color: #1d1d1f;
+  background: var(--play-cyan);
+}
+
+.play-choice .choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.play-choice .choice-text b {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.play-choice .choice-text small {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--play-muted);
+}
+
+.play-panel-main > div > .play-result-block.choose {
+  max-width: none;
+}
+
+.route-choose h3 {
+  margin-bottom: 10px;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .play-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .play-choice {
+    min-height: 0;
+  }
+}
+
+/* ---- While the music plays: only the cards, the ball (while it lasts) and the keyboard ---- */
+
+body.music-on .topbar {
+  display: none;
+}
+
+body.music-on .play-top {
+  margin-bottom: 8px;
+}
+
+body.music-on .play-top .play-hud-goal,
+body.music-on .play-top .play-hud-progress,
+body.music-on .play-top .play-hud-tools,
+body.music-on .play-top .play-level-box,
+body.music-on .play-top .play-stars {
+  display: none;
+}
+
+body.music-on .play-hud {
+  padding: 6px 14px;
+}
+
+body.music-on .play-hud-text strong {
+  font-size: 15px;
+}
+
+body.music-on .score-legend {
+  display: none !important;
+}
+
+/* Faded (from «A prop» on): the current card is still framed, but quietly. */
+.play-view.faded .score-tile.now {
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 35%);
+}
+
+.route-transfer {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #d6dbe3;
+  background: rgb(255 255 255 / 5%);
+  border-left: 3px solid var(--c, #1fb6e3);
+  border-radius: 0 10px 10px 0;
+}
+
+.route-backpack-level .route-transfer {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.route-step.rehearsal {
+  border-style: dashed;
+}
+
+.play-choice-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.play-choices.sub {
+  padding: 10px;
+  background: rgb(0 0 0 / 18%);
+  border-radius: 14px;
+}
+
+.play-choice.change .choice-icon {
+  background: rgb(255 255 255 / 14%);
+}
+
+.play-choice.change.open {
+  border-color: var(--play-cyan);
+}
