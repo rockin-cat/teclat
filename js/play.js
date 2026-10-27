@@ -1371,14 +1371,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, stor
     const tile = (lv) => {
       const pr = progress(lv);
       const b = el('button', { type: 'button', className: `ptile${pr.ok ? ' done' : ''}${pr.touched && !pr.ok ? ' cur' : ''}` }, [
-        el('span', { className: 'ptile-num', textContent: String(lv.n) }),
-        el('div', { className: 'ptile-text' }, [
-          el('b', { textContent: lv.titol }),
-          el('small', { textContent: lv.sub }),
+        el('span', { className: 'ptile-top' }, [el('span', { className: 'ptile-num', textContent: String(lv.n) }), el('span', { className: 'ptile-icon', textContent: lv.icona })]),
+        el('b', { textContent: lv.titol }),
+        el('small', { textContent: lv.sub }),
+        el('span', { className: 'ptile-foot' }, [
           el('span', { className: 'pbar' }, [el('i', { style: `width:${pr.total ? Math.round((pr.ok / pr.total) * 100) : 0}%` })]),
-          el('em', { textContent: pr.total ? `${pr.ok} de ${pr.total} a «Ja ho tens!»${pr.touched && pr.touched > pr.ok ? ` · ${pr.touched - pr.ok} en marxa` : ''}` : 'Sense passos per a aquesta cançó' }),
+          el('em', { textContent: pr.total ? `${pr.ok} de ${pr.total}${pr.touched && pr.touched > pr.ok ? ` · ${pr.touched - pr.ok} en marxa` : ''}` : '—' }),
         ]),
-        el('span', { className: 'ptile-icon', textContent: lv.icona }),
       ]);
       b.addEventListener('click', () => { routeLevelOpen = lv.n; showRoute(); });
       return b;
