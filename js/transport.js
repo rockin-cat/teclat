@@ -35,6 +35,16 @@ export function createTransport({ progression, meter, tempo, countInBars, backin
   const pulseSeconds = pulseTicks / ticksPerSecond;
 
   const chordForBar = (bar) => progression[mod(bar, progression.length)];
+  /** The chord sounding at a pulse of the bar: the second one from half bar on, when the bar has two. */
+  const chordAt = (bar, pulse) => {
+    const c = chordForBar(bar);
+    return c?.second && pulse >= meter.pulses / 2 ? c.second : c;
+  };
+  /** What comes next from a pulse: the bar's second chord, or the next bar's first. */
+  const nextFrom = (bar, pulse) => {
+    const c = chordForBar(bar);
+    return c?.second && pulse < meter.pulses / 2 ? c.second : chordForBar(bar + 1);
+  };
   let startTime = Infinity; // when the latest start or resume becomes audible
   let pausedTicks = 0; // position shown until then
   const scheduled = new Set();
@@ -47,15 +57,17 @@ export function createTransport({ progression, meter, tempo, countInBars, backin
       const rawBar = Math.floor(step / stepsPerBar);
       const stepInBar = step - rawBar * stepsPerBar;
       const bar = rawBar - countInBars;
+      const pulse = Math.floor(stepInBar / subsPerPulse);
       backing.playStep({
         time,
         countIn: bar < 0,
-        chord: bar < 0 ? null : chordForBar(bar),
-        nextChord: bar < 0 ? null : chordForBar(bar + 1),
+        chord: bar < 0 ? null : chordAt(bar, pulse),
+        nextChord: bar < 0 ? null : nextFrom(bar, pulse),
+        splitBar: bar >= 0 && Boolean(chordForBar(bar)?.second),
         bar,
         subsPerPulse,
         compound: meter.compound,
-        pulse: Math.floor(stepInBar / subsPerPulse),
+        pulse,
         sub: stepInBar % subsPerPulse,
         pulses: meter.pulses,
         pulseSeconds,
@@ -83,7 +95,7 @@ export function createTransport({ progression, meter, tempo, countInBars, backin
       pulseFraction: (barFraction * meter.pulses) % 1,
       loop: Math.floor(bar / progression.length),
       chordIndex: mod(bar, progression.length),
-      chord: chordForBar(bar),
+      chord: chordAt(bar, Math.floor(barFraction * meter.pulses)),
     };
   }
 
@@ -117,6 +129,7 @@ export function createTransport({ progression, meter, tempo, countInBars, backin
     },
     positionAt,
     chordForBar,
+    chordAt,
     barStartTicks: (bar) => (bar + countInBars) * barTicks,
     start() {
       startTime = Tone.now() + 0.05;

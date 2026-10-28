@@ -606,5 +606,33 @@ export function createScore(container) {
     shownRow = null;
   };
 
-  return { setBars, setStatus, setCurrent, shake, touch, flag, frame, redrawAll, clear, get size() { return tiles.length; } };
+  /**
+   * At the end of a try, a card played several times (×2, ×4) shows the pass
+   * where something went wrong, not just the last one, so the error can be
+   * found; the row badge says which pass it is.
+   */
+  function revealWorst(statusFor) {
+    const groups = new Map();
+    tiles.forEach((tile, k) => {
+      if (!tile) return;
+      if (!groups.has(tile)) groups.set(tile, []);
+      groups.get(tile).push(k);
+    });
+    for (const [tile, idx] of groups) {
+      const bad = idx.find((k) => statusFor(k) === 'miss');
+      const pick = bad ?? idx[idx.length - 1];
+      tile.active = pick;
+      tile.node.classList.remove('ok', 'miss', 'past');
+      const status = statusFor(pick);
+      if (status) tile.node.classList.add(status);
+      const badge = tile.rowNode.repeatBadge;
+      if (badge && bad !== undefined && idx.length > 1 && !tile.rowNode.perChord) {
+        badge.textContent = `${passOf(pick)}a volta de ${tile.rowNode.repeat}: l'error és aquí`;
+        badge.classList.add('second');
+      }
+      dirty.add(pick);
+    }
+  }
+
+  return { setBars, setStatus, setCurrent, shake, touch, flag, frame, redrawAll, revealWorst, clear, get size() { return tiles.length; } };
 }

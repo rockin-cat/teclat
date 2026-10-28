@@ -80,7 +80,25 @@ export function parseChord(symbol) {
   };
 }
 
-/** "C | Am | F | G" -> one chord per bar. "%" repeats the previous bar. */
+/** The chords written in one bar: "C" -> ["C"], "C G" -> ["C", "G"] (two chords, half a bar each). */
+export const barChords = (bar) => String(bar).trim().split(/\s+/).filter(Boolean);
+
+/**
+ * One bar's chord: the first chord of the bar, with the second one (when the
+ * bar has two, "C G") as `second`. Everything that reads `chord` keeps
+ * working on the first; the transport and the judge switch at half bar.
+ */
+export function parseBar(bar) {
+  const tokens = barChords(bar);
+  const chord = parseChord(tokens[0]);
+  if (tokens[1]) {
+    chord.second = parseChord(tokens[1]);
+    chord.split = `${tokens[0]} ${tokens[1]}`;
+  }
+  return chord;
+}
+
+/** "C | Am | F | G" -> one chord per bar ("C G": two, half a bar each). "%" repeats the previous bar. */
 export function parseProgression(text) {
   const bars = text.split('|').map((s) => s.trim()).filter(Boolean);
   if (!bars.length) throw new Error('La progressió d\'acords és buida');
@@ -92,10 +110,10 @@ export function parseProgression(text) {
       return;
     }
     const tokens = bar.split(/\s+/);
-    if (tokens.length > 1) {
-      throw new Error(`El compàs ${i + 1} ("${bar}") té més d'un acord; només se'n permet un per compàs`);
+    if (tokens.length > 2) {
+      throw new Error(`El compàs ${i + 1} ("${bar}") té més de dos acords; com a molt, dos per compàs`);
     }
-    chords.push(parseChord(tokens[0]));
+    chords.push(parseBar(bar));
   });
   return chords;
 }

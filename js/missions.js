@@ -21,7 +21,7 @@
 // Missions and worlds with `inversions: true` place each chord as close as
 // possible to the previous one.
 
-import { parseChord, parseTimeSignature, splitChord } from './theory.js';
+import { barChords, parseChord, parseTimeSignature, splitChord } from './theory.js';
 import { playableCards, tierOf } from './cards.js';
 
 const card = (n) => `rhythm_binary_${String(n).padStart(2, '0')}.png`;
@@ -349,18 +349,22 @@ export function buildPath(spec, allCards) {
   const name = (c) => c.filename;
 
   const split = (text) => (text ?? '').split('|').map((s) => s.trim()).filter(Boolean);
+  // A bar may hold two chords ("C G", half a bar each): the lists of chords to
+  // learn, the changes and the step-by-step missions use every chord (`flat`);
+  // the progressions keep the bars as written and the game switches at half bar.
+  const flat = (list) => list.flatMap(barChords);
   const bars = split(spec.progression);
   const chorus = split(spec.chorus);
   if (!bars.length) throw new Error('Escriu almenys un acord');
   // Songs of the book: every part of the song, in order.
   const parts = spec.parts ? Object.entries(spec.parts).map(([partName, text]) => ({ name: partName, bars: split(text) })) : [];
-  const chords = [...new Set(bars)];
-  const partChords = [...new Set(parts.flatMap((p) => p.bars))].filter((c) => !chords.includes(c) && !chorus.includes(c));
-  const chorusChords = [...new Set(chorus)].filter((c) => !chords.includes(c));
+  const chords = [...new Set(flat(bars))];
+  const partChords = [...new Set(flat(parts.flatMap((p) => p.bars)))].filter((c) => !chords.includes(c) && !flat(chorus).includes(c));
+  const chorusChords = [...new Set(flat(chorus))].filter((c) => !chords.includes(c));
   [...chords, ...chorusChords, ...partChords].forEach((symbol) => parseChord(symbol)); // validates
   const root = splitChord(chords[0]).root;
   const wheel = bars.join(' | ');
-  const wheelText = bars.map(chordName).join(' – ');
+  const wheelText = bars.map((bar) => barChords(bar).map(chordName).join(' ')).join(' – ');
   const common = { meter: spec.meter, style: spec.style, level: 2, progression: wheel, chords };
   const worlds = [];
   const id = (w, k) => `${spec.id}:${w}:${k}`;
@@ -394,7 +398,7 @@ export function buildPath(spec, allCards) {
 
   // Learn the wheel: each chord, and each change as soon as both chords are known.
   const learn = [];
-  const changes = wheelChanges(bars);
+  const changes = wheelChanges(flat(bars));
   const added = new Set();
   const learned = new Set();
   chords.forEach((symbol) => {
@@ -408,7 +412,7 @@ export function buildPath(spec, allCards) {
     }
   });
   learn.push(
-    { id: id('l', 'steps'), type: 'steps', title: 'La roda pas a pas', chords: bars },
+    { id: id('l', 'steps'), type: 'steps', title: 'La roda pas a pas', chords: flat(bars) },
     { id: id('l', 'long'), type: 'pattern', title: 'La roda amb música', card: name(whole), help: 'shape' },
     { id: id('l', 'goal'), type: 'mix', title: 'Objectiu: la roda de memòria', cards: [whole, whole].map(name) },
   );
@@ -444,11 +448,12 @@ export function buildPath(spec, allCards) {
     const known = new Set(changes.map((c) => `${c.from}>${c.to}`));
     for (const part of parts) {
       const fresh = [];
-      part.bars.forEach((c, k) => {
-        const key = k > 0 && part.bars[k - 1] !== c ? `${part.bars[k - 1]}>${c}` : null;
+      const partFlat = flat(part.bars);
+      partFlat.forEach((c, k) => {
+        const key = k > 0 && partFlat[k - 1] !== c ? `${partFlat[k - 1]}>${c}` : null;
         if (key && !known.has(key)) {
           known.add(key);
-          fresh.push({ from: part.bars[k - 1], to: c });
+          fresh.push({ from: partFlat[k - 1], to: c });
         }
       });
       if (!fresh.length) continue;
@@ -456,7 +461,7 @@ export function buildPath(spec, allCards) {
       // Leave out the full wheels at the start of the part.
       let start = 0;
       while (start + bars.length <= part.bars.length && bars.every((c, j) => part.bars[start + j] === c)) start += bars.length;
-      song.push({ id: id('s', `p-${part.name}`), type: 'steps', title: `La part ${part.name} pas a pas`, chords: part.bars.slice(Math.max(0, start - 1)) });
+      song.push({ id: id('s', `p-${part.name}`), type: 'steps', title: `La part ${part.name} pas a pas`, chords: flat(part.bars.slice(Math.max(0, start - 1))) });
     }
     const names = parts.map((p) => p.name);
     song.push({
@@ -472,7 +477,7 @@ export function buildPath(spec, allCards) {
   } else if (chorus.length) {
     for (const symbol of chorusChords) song.push({ id: id('s', `c-${symbol}`), type: 'chord', title: `Construeix ${chordName(symbol)}`, chord: symbol });
     song.push(
-      { id: id('s', 'chorus'), type: 'steps', title: 'La tornada pas a pas', chords: chorus },
+      { id: id('s', 'chorus'), type: 'steps', title: 'La tornada pas a pas', chords: flat(chorus) },
       {
         id: id('s', 'structure'),
         type: 'structure',
@@ -504,7 +509,7 @@ export function buildPath(spec, allCards) {
     inv.push({ id: id('i', `x${k}`), type: 'change', title: `${chordName(pair.from)} → ${chordName(pair.to)}, a prop`, from: pair.from, to: pair.to });
   });
   inv.push(
-    { id: id('i', 'steps'), type: 'steps', title: 'La roda a prop, pas a pas', chords: bars },
+    { id: id('i', 'steps'), type: 'steps', title: 'La roda a prop, pas a pas', chords: flat(bars) },
     { id: id('i', 'long'), type: 'pattern', title: 'La roda a prop amb música', card: name(whole), help: 'shape' },
     { id: id('i', 'band'), type: 'band', title: 'Toca amb la banda', cards: [e3, e2, e4, e1].map(name) },
   );

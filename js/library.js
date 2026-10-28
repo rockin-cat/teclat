@@ -104,26 +104,37 @@ export function gameChord(text) {
   }
 }
 
-/** The chord that fills most of a generator bar ({ div, cells }); the first one on a tie. */
+/**
+ * A generator bar ({ div, cells }) as the game writes it: one chord ("C"), or
+ * two when the bar is split in halves ("C G": the chord of each half; with
+ * three or more cells, the chord that fills most of each half). A bar with
+ * more than two different chords is reduced to the two halves.
+ */
 function barChord(bar) {
-  const cells = Array.isArray(bar?.cells) ? bar.cells : [];
-  const count = new Map();
-  for (const c of cells) {
-    const symbol = gameChord(c);
-    if (symbol) count.set(symbol, (count.get(symbol) ?? 0) + 1);
-  }
-  let best = null;
-  for (const [symbol, n] of count) if (!best || n > best.n) best = { symbol, n };
-  return best?.symbol ?? null;
+  const cells = Array.isArray(bar?.cells) ? bar.cells.map(gameChord) : [];
+  const chords = cells.filter(Boolean);
+  if (!chords.length) return null;
+  const majority = (list) => {
+    const count = new Map();
+    for (const symbol of list.filter(Boolean)) count.set(symbol, (count.get(symbol) ?? 0) + 1);
+    let best = null;
+    for (const [symbol, n] of count) if (!best || n > best.n) best = { symbol, n };
+    return best?.symbol ?? null;
+  };
+  if (new Set(chords).size === 1 || cells.length < 2) return chords[0];
+  const half = Math.ceil(cells.length / 2);
+  const a = majority(cells.slice(0, half)) ?? chords[0];
+  const b = majority(cells.slice(half)) ?? a;
+  return a === b ? a : `${a} ${b}`;
 }
 
-/** "C | G Am | F" or "C G Am F" (the generator's chord text) -> one chord per bar. */
+/** "C | G Am | F" or "C G Am F" (the generator's chord text) -> one bar per chunk ("G Am": two chords, half a bar each). */
 function barsFromText(text) {
   const out = [];
   for (const chunk of String(text ?? '').split('|')) {
     const tokens = chunk.split(/[\s,]+/).filter((t) => t && t !== '.' && t !== '_');
     const chords = tokens.map(gameChord).filter(Boolean);
-    if (chords.length) out.push(chords[0]);
+    if (chords.length) out.push(chords.length > 1 && chords[0] !== chords[1] ? `${chords[0]} ${chords[1]}` : chords[0]);
   }
   return out;
 }
@@ -200,7 +211,7 @@ export function specFromLibrary(song, entry) {
   const matched = gameStyle(est.estil);
   const style = matched ?? (meter === '3/4' ? 'vals' : 'rock');
   const noteText = [
-    notes.includes('split') ? 'Als compassos amb dos acords, el joc hi toca el que dura més.' : '',
+    notes.includes('split') ? 'Hi ha compassos amb dos acords: la banda canvia a mig compàs i les cartes porten els dos acords escrits.' : '',
     beats === 2 ? 'La cançó és en 2/4: aquí es toca en 4/4, un acord per compàs.' : '',
     est.estil && !matched ? `A la biblioteca l'estil és «${est.estil}»; aquí la banda el toca com a ${style === 'vals' ? 'vals' : 'rock'}.` : '',
   ].filter(Boolean).join(' ');

@@ -14,7 +14,7 @@
 // teacher can build a path for any chord wheel and meter.
 
 import { ROCKIN_PATH, SPEEDS, WORKSHOP_PATH, buildPath, chordName, makePath, triadNoteNames } from './missions.js';
-import { contourNotes, parseChord, parseTimeSignature, pitchClass, splitChord, mod } from './theory.js';
+import { barChords, contourNotes, parseBar, parseChord, parseTimeSignature, pitchClass, splitChord, mod } from './theory.js';
 import { STYLES, createBacking, dominantOf, pedalHarmony } from './backing.js';
 import { createTransport } from './transport.js';
 import { createEvaluator } from './evaluator.js';
@@ -45,7 +45,7 @@ const GRACE_MS = 400;
 const AUTO_NEXT_SECONDS = 5;
 const AUTO_RETRY_SECONDS = 7; // after a miss, the same mission starts again by itself
 const TEMPO_STEP = 8; // how much slower the next try is after a hard one
-const TEMPO_MAX_DROP = 24;
+const TEMPO_MAX_DROP = 40; // five steps down at most
 const SOLFEGE = ['Do', 'Do♯', 'Re', 'Mi♭', 'Mi', 'Fa', 'Fa♯', 'Sol', 'La♭', 'La', 'Si♭', 'Si'];
 const SHAPE = '#ffe38a';
 const SHAPE_NEXT = '#ffb37a';
@@ -115,7 +115,12 @@ function keyOf(spec) {
   const { root, suffix } = splitChord(first);
   return `${root}${suffix.startsWith('m') && !suffix.startsWith('maj') ? 'm' : ''}`;
 }
-const splitProgression = (text) => text.split('|').map((s) => s.trim()).filter(Boolean);
+// The bars of a progression as written ("C | G Am | F"; a bar may hold two chords).
+const splitBars = (text) => text.split('|').map((s) => s.trim()).filter(Boolean);
+// Every chord of a progression, one by one (a bar with two chords gives two).
+const splitProgression = (text) => splitBars(text).flatMap(barChords);
+/** The chord written over a card: both when the bar has two. */
+const barName = (bar) => barChords(bar).map(chordName).join(' · ');
 const isTriad = (symbol) => ['', 'm'].includes(splitChord(symbol).suffix);
 
 function starsFor(ratio, type) {
@@ -1505,7 +1510,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     if (more.length) {
       const change = el('button', { type: 'button', className: 'play-choice change' }, [
         el('span', { className: 'choice-icon', textContent: '🔧' }),
-        el('span', { className: 'choice-text' }, [el('b', { textContent: 'Canviar alguna cosa' }), el('small', { textContent: more.map((o) => (CHOICE_SHORT[o.id] ?? o.id)).join(' · ') })]),
+        el('span', { className: 'choice-text' }, [el('b', { textContent: 'Canviar alguna cosa' }), el('small', { textContent: [...new Set(more.map((o) => (CHOICE_SHORT[o.id] ?? o.id)))].join(' · ') })]),
       ]);
       change.addEventListener('click', () => {
         sub.hidden = !sub.hidden;
@@ -1545,7 +1550,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const missionId = mission?.id;
     const LV = ['no', 'gairebe', 'ok'];
     const judged = stars !== null || ratio !== null;
-    const level = proposeLevel({ stars, ratio });
+    // Steps the game cannot judge (improvising, composing, singing) count as done by doing them.
+    const level = judged ? proposeLevel({ stars, ratio }) : 'ok';
     const n = LV.indexOf(level);
     const store = routeStore();
     const before = store[entry.key];
@@ -1568,12 +1574,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     // The options: the mission's own (tempo, help: they do what they say), then the route's.
     const own = (id) => options.find((o) => o.id === id);
     const list = [
-      own('slower') ?? own('faster'),
+      own('slower'),
+      own('faster'),
       own('help-on') ?? own('help-off'),
       retry || entry.kind ? { id: 'repeat', label: CHOICES.repeat, go: retry ?? (() => openStep(entry)) } : null,
       prev ? { id: 'back', label: `${CHOICES.back}: ${prev.title}`, to: prev } : null,
       next ? { id: 'next', label: `${CHOICES.next}: ${next.title}`, to: next } : null,
-      { id: 'done', label: CHOICES.done, to: null },
+      // «Ho porto al grup» only once the step is «Ja ho tens!»: nothing is unlocked by saying so.
+      level === 'ok' ? { id: 'done', label: CHOICES.done, to: null } : null,
     ].filter(Boolean);
     if (rec) {
       const ids = new Set(list.map((o) => o.id));
@@ -2628,6 +2636,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   };
   const keysWanted = (helpMode) => {
     if (mission?.rehearsal) return false;
+    // Lit keys need the keyboard, even if it was hidden with the 🎹 button.
+    if (helpMode === 'shape') return true;
     if (keysManual !== null) return keysManual;
     // With a MIDI keyboard and nothing to paint, the screen keyboard only distracts.
     if (helpMode !== 'shape' && midiOn() && aidStage() >= 1) return false;
@@ -2952,7 +2962,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       const doneOpt = level === 2 && stepLevel(before) === 2 ? { id: 'done', label: 'Ja no cal: ho porto al grup', target: null } : null;
       const own = (id) => options.find((o) => o.id === id);
       const list = [
-        own('slower') ?? own('faster'),
+        own('slower'),
+      own('faster'),
         own('help-on') ?? own('help-off'),
         part,
         back,
@@ -5323,16 +5334,18 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       for (let k = 0; k < perRow; k++) {
         if (k % chunk === 0) rowsOf.push({ label: k ? '' : label, bars: [] });
         rowsOf.at(-1).bars.push(playBars.length);
-        playBars.push({ card, chord: progression[k % progression.length], kind: 'play', section: label });
+        // A bar with two chords ("C G"): the first for the first half, `chord2` for the second.
+        const [first, second] = barChords(progression[k % progression.length]);
+        playBars.push({ card, chord: first, chord2: second ?? null, kind: 'play', section: label });
       }
     };
-    let progression;
+    let progression; // bars as written (a bar may hold two chords)
     if (type === 'structure') {
-      const sections = mission.sections.map((s) => ({ ...s, bars: splitProgression(s.progression), cardObj: cardByName(s.card) }));
+      const sections = mission.sections.map((s) => ({ ...s, bars: splitBars(s.progression), cardObj: cardByName(s.card) }));
       for (const i of mission.order) addRow(sections[i].cardObj, sections[i].bars, sections[i].name);
       progression = sections[0].bars;
     } else {
-      progression = splitProgression(mission.progression ?? world.progression);
+      progression = splitBars(mission.progression ?? world.progression);
       const cards = (mission.cards ?? [mission.card]).map(cardByName);
       for (const card of cards) addRow(card, progression, '');
       // A single round is too short: play it twice, on the same cards ("×2").
@@ -5361,7 +5374,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const columns = Math.min(8, Math.max(...rowsOf.map((r) => r.bars.length)));
     playBars.forEach((bar, b) => {
       const previous = playBars[b - 1];
-      bar.name = level === 1 ? SOLFEGE[parseChord(bar.chord).root] : chordName(bar.chord);
+      bar.name = level === 1 ? SOLFEGE[parseChord(bar.chord).root] : bar.chord2 ? `${chordName(bar.chord)} · ${chordName(bar.chord2)}` : chordName(bar.chord);
       // As on the paper cards: the chord written above, and from «A prop» on no degree (I, V, vi…); «com a l'assaig», no colour either.
       if (level !== 1 && !rehearsal) {
         Object.assign(bar, colourOf(bar.chord));
@@ -5372,12 +5385,36 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const two = Boolean(world.twoHands);
     const mode = leftMode();
     const rightOf = (chord) => (level === 1 ? [rightHandVoicing(chord)[0]] : rightHandVoicing(chord));
-    const voicings = two ? playBars.map((b) => rightOf(b.chord)) : chainFor(playBars.map((b) => b.chord), world, level);
+    // Voicings per bar; a bar with two chords gets a second one (`voicings2`),
+    // chained with the rest so the hand moves as little as possible.
+    let voicings;
+    let voicings2 = null;
+    if (two) {
+      voicings = playBars.map((b) => rightOf(b.chord));
+      voicings2 = playBars.map((b) => (b.chord2 ? rightOf(b.chord2) : null));
+    } else {
+      const seq = playBars.flatMap((b) => (b.chord2 ? [b.chord, b.chord2] : [b.chord]));
+      const chain = chainFor(seq, world, level);
+      let i = 0;
+      voicings = [];
+      voicings2 = [];
+      for (const b of playBars) {
+        voicings.push(chain[i++]);
+        voicings2.push(b.chord2 ? chain[i++] : null);
+      }
+    }
+    if (voicings2.every((v) => v === null)) voicings2 = null;
     const leftVoicings = two ? playBars.map((b) => leftHandVoicing(b.chord, level === 1 ? 'bass' : mode)) : null;
+    // The second half's voicings travel with the bar (bars are copied for the example rows).
+    playBars.forEach((b, k) => {
+      if (!b.chord2) return;
+      b.v2 = voicings2?.[k] ?? null;
+      b.l2 = two ? leftHandVoicing(b.chord2, level === 1 ? 'bass' : mode) : null;
+    });
     const cards = [...new Set(playBars.map((b) => b.card))];
-    const chords = [...new Set(progression)];
-    const wheel = progression.map(chordName).join(' – ');
-    const rootName = SOLFEGE[parseChord(progression[0]).root];
+    const chords = [...new Set(progression.flatMap(barChords))];
+    const wheel = progression.map(barName).join(' – ');
+    const rootName = SOLFEGE[parseBar(progression[0]).root];
 
     const what = level === 5
       ? `Una nota a cada temps, seguint les <b>fletxes</b> amb l'<b>escala</b> de ${chordLong(path.key ?? 'C')}: <b>●</b> comença en una nota de l'acord (la que vulguis), <b>↑</b> la nota següent de l'escala, <b>↓</b> l'anterior, <b>→</b> la mateixa, <b>⇈ ⇊</b> salta'n una. La pilota bota amb el pols.`
@@ -5534,6 +5571,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     };
 
     const runTry = ({ bars, rows, allVoicings, allLeft, listenedAll }) => {
+      // The help may have changed since the start screen («Posar ajuda» after a result).
+      showKeyboard(keysWanted(helpFor()));
+      setFocus(helpFor() === 'shape' ? 'both' : 'card');
       const buttons = () => [button('Atura', () => intro(), 'ghost')];
       const statusFor = (phase) => {
         if (phase === 'demo') setStatus({ kicker: 'Escolta', text: `El piano toca ${listenedAll ? 'totes les cartes, tal com les tocaràs' : demoCount === 1 ? 'la carta' : listenBoth ? 'l\'estrofa i la tornada' : type === 'structure' ? 'la primera part' : 'la roda sencera'}. <b>Encara no toquis</b>: mira la pilota.`, tone: 'listen', buttons: buttons() });
@@ -5577,15 +5617,18 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           else if ((got === 0 || inARow >= 2) && !boosted && (help === 'none' || canListen)) suggest = 'help-on';
           else if (got >= 2 && boosted) suggest = 'help-off';
           else if (ratio >= 0.999 && drop > 0) suggest = 'faster';
+          // Slower and faster are both there whenever they make sense: the
+          // tempo can go down several times (to TEMPO_MAX_DROP below) and back up.
           const options = [];
-          if (drop > 0 && got >= 1) {
-            options.push({ id: 'faster', label: `Pujar el tempo (${Math.min(baseTempo, tempo + TEMPO_STEP)}) i tornar-hi`, go: () => {
-              tempoDrop.set(mission.id, Math.max(0, drop - TEMPO_STEP));
-              play(false);
-            } });
-          } else if (drop < TEMPO_MAX_DROP && tempo > 44) {
+          if (drop < TEMPO_MAX_DROP && tempo > 44) {
             options.push({ id: 'slower', label: `Baixar el tempo (${Math.max(44, tempo - TEMPO_STEP)}) i tornar-hi`, go: () => {
               tempoDrop.set(mission.id, drop + TEMPO_STEP);
+              play(false);
+            } });
+          }
+          if (drop > 0) {
+            options.push({ id: 'faster', label: `Pujar el tempo (${Math.min(baseTempo, tempo + TEMPO_STEP)}) i tornar-hi`, go: () => {
+              tempoDrop.set(mission.id, Math.max(0, drop - TEMPO_STEP));
               play(false);
             } });
           }
@@ -5597,6 +5640,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           } else if (help === 'none') {
             options.push({ id: 'help-on', label: canListen ? 'Posar ajuda: escoltar-ho primer i tecles il·luminades' : 'Posar ajuda: tecles il·luminades', go: () => {
               helpBoost.set(mission.id, true);
+              keysManual = null; // the keyboard comes back if it was hidden
               play(canListen ? listenMode : false);
             } });
           } else if (canListen) {
@@ -5815,12 +5859,22 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     Tone.getContext().lookAhead = 0.1;
     // A bar marked `dominant` is the one that counts you in: the band plays the V
     // of what comes next, so the entry resolves instead of starting cold.
-    const chords = bars.map((bar) => parseChord(bar.dominant ? dominantOf(bar.chord) : bar.chord));
-    const voice = (b) => {
+    const chords = bars.map((bar) => {
+      const c = parseChord(bar.dominant ? dominantOf(bar.chord) : bar.chord);
+      if (bar.chord2 && !bar.dominant) c.second = parseChord(bar.chord2); // two chords in the bar: the band and the judge switch at half bar
+      return c;
+    });
+    const voice = (b, half = false) => {
+      const bar = bars[Math.max(0, Math.min(bars.length - 1, b))];
+      if (half && bar.chord2) {
+        if (bar.v2) return bar.v2;
+        return level === 1 ? [rootVoicing(bar.chord2)[0]] : rootVoicing(bar.chord2);
+      }
       if (voicings?.[b]) return voicings[b];
-      const chord = bars[Math.max(0, Math.min(bars.length - 1, b))].chord;
+      const chord = bar.chord;
       return level === 1 ? [rootVoicing(chord)[0]] : rootVoicing(chord);
     };
+    const halfOf = (b, tick) => Boolean(bars[b]?.chord2) && tick >= transport.barStartTicks(b) + transport.barTicks / 2;
     const deck = { cardForBar: (b) => bars[Math.max(0, Math.min(bars.length - 1, b))].card };
     const backing = createBacking({ style, chords: true, volume: -12, metronome: false, endBar: bars.length });
     // One single note to play: the band moves around it with chords of the key.
@@ -5848,7 +5902,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       review.marks.get(bar).push(mark);
       score.touch(bar);
     };
-    const voiceL = (b) => hands.leftVoicings[Math.max(0, Math.min(hands.leftVoicings.length - 1, b))];
+    const voiceL = (b, half = false) => {
+      const bar = bars[Math.max(0, Math.min(bars.length - 1, b))];
+      if (half && bar.chord2 && bar.l2) return bar.l2;
+      return hands.leftVoicings[Math.max(0, Math.min(hands.leftVoicings.length - 1, b))];
+    };
     const onResult = (hand) => (r) => {
       const result = results[playIndex[r.bar]];
       if (!result) return;
@@ -5884,8 +5942,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       const nearest = (list, note) => (list?.length ? Math.min(...list.map((n) => Math.abs(n - note))) : 99);
       const pick = (note, timeStamp = null) => {
         const b = Math.max(0, Math.min(bars.length - 1, at));
-        const dR = nearest(voice(b), note);
-        const dL = nearest(voiceL(b), note);
+        const dR = nearest([...voice(b), ...(bars[b]?.chord2 ? voice(b, true) : [])], note);
+        const dL = nearest([...voiceL(b), ...(bars[b]?.chord2 ? voiceL(b, true) : [])], note);
         // Only one hand has something to play right now (the left holding a long
         // note while the right plays short ones, say): the note is for that one,
         // unless it is clearly in the other hand's part of the keyboard — with
@@ -5919,8 +5977,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         markersForBar: (b) => right.markersForBar(b),
         markersLeft: (b) => left.markersForBar(b),
         guideForBar: (b) => [
-          ...right.guideForBar(b).map((item) => ({ ...item, notes: voice(b), hand: 'right' })),
-          ...left.guideForBar(b).map((item) => ({ ...item, notes: voiceL(b), hand: 'left' })),
+          ...right.guideForBar(b).map((item) => ({ ...item, notes: voice(b, halfOf(b, item.startTick)), hand: 'right' })),
+          ...left.guideForBar(b).map((item) => ({ ...item, notes: voiceL(b, halfOf(b, item.startTick)), hand: 'left' })),
         ],
         allowedPitchClasses: (b) => right.allowedPitchClasses(b),
         setDemo: (from, to) => {
@@ -5943,7 +6001,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       if (bar.kind === 'demo') {
         for (const item of evaluator.guideForBar(b)) {
           const seconds = ((item.endTick - item.startTick) / transport.ticksPerSecond) * 0.92;
-          const notes = hands || level === 3 || level === 5 ? item.notes : voice(b);
+          const notes = hands || level === 3 || level === 5 ? item.notes : voice(b, halfOf(b, item.startTick));
           transport.scheduleAt(item.startTick, (time) => backing.playDemo(notes, seconds, time));
         }
       }
@@ -6040,22 +6098,30 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       const marks = new Map();
       if (help === 'shape' && (kind === 'play' || kind === 'ready' || kind === 'count')) {
         const nextBar = index + 1 < bars.length ? index + 1 : null;
-        const changing = nextBar !== null && position.barFraction > 0.75 && bars[nextBar].chord !== bar.chord && kind === 'play';
+        const f = position.barFraction;
+        // Two chords in the bar: the second one is announced from a quarter in and painted from half bar.
+        const inSecond = kind === 'play' && Boolean(bar.chord2) && f >= 0.5;
+        const toSecond = kind === 'play' && Boolean(bar.chord2) && f > 0.25 && f < 0.5;
+        const lastChord = bar.chord2 ?? bar.chord;
+        const changing = nextBar !== null && f > 0.75 && bars[nextBar].chord !== lastChord && kind === 'play';
         const targetBar = kind === 'play' ? (changing ? nextBar : index) : bars.findIndex((x) => x.kind === 'play');
+        const half = !changing && (inSecond || toSecond);
+        const symbol = changing ? bars[targetBar].chord : half ? bar.chord2 : bars[targetBar].chord;
+        const next = changing || toSecond;
         const shape = hands
-          ? handMarks(voice(targetBar), voiceL(targetBar), { next: changing, symbol: bars[targetBar].chord })
+          ? handMarks(voice(targetBar, half), voiceL(targetBar, half), { next, symbol })
           : level === 3
-            ? melodicMarks(bars[targetBar].chord, bars[targetBar].card, changing ? SHAPE_NEXT : SHAPE)
+            ? melodicMarks(symbol, bars[targetBar].card, next ? SHAPE_NEXT : SHAPE)
             : level === 5
-              ? contourMarks(evaluator.contourHint(targetBar), changing ? SHAPE_NEXT : SHAPE)
-              : shapeMarks(voice(targetBar), changing ? SHAPE_NEXT : SHAPE);
+              ? contourMarks(evaluator.contourHint(targetBar), next ? SHAPE_NEXT : SHAPE)
+              : shapeMarks(voice(targetBar, half), next ? SHAPE_NEXT : SHAPE);
         for (const [n, m] of shape) marks.set(n, m);
       }
       const notes = kind === 'demo'
         ? [index, index + 1].flatMap((k) => (k < bars.length && bars[k].kind === 'demo' ? evaluator.guideForBar(k).map((item) => (hands || level === 5 ? item : level === 3
           // Melodic demo: the keys light up in the colour of the chord's degree, so the notes group by chord.
           ? { ...item, colour: colourOf(bars[k].chord).colour }
-          : { ...item, notes: voice(k) })) : []))
+          : { ...item, notes: voice(k, halfOf(k, item.startTick)) })) : []))
         : [];
       view = { marks, message: '', notes, now: kind === 'demo' ? position.ticks : null, window: 3 * transport.ticksPerSecond };
 
@@ -6076,14 +6142,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       if (own.done >= bars.length) {
         stopSession({ natural: true });
         // Show the played cards, with their marks, from the top.
-        if (!reveal) {
-          reveal = true;
-          bars.forEach((bar, k) => {
-            const r = playIndex[k] !== undefined ? results[playIndex[k]] : null;
-            if (r) score.setStatus(k, r.clean ? 'ok' : 'miss');
-            score.touch(k);
-          });
-        }
+        reveal = true;
+        // Every card shows the pass with the error (if any), with its marks.
+        score.revealWorst((k) => (playIndex[k] !== undefined ? (results[playIndex[k]].clean ? 'ok' : 'miss') : null));
         score.setCurrent(bars.findIndex((x) => x.kind === 'play'));
         score.setCurrent(-1);
         onEnd?.({ results, stats });
@@ -6116,7 +6177,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     try {
       const m = parseTimeSignature(meter);
       const backing = createBacking({ style, chords: true, volume: -20, metronome: false });
-      const transport = createTransport({ progression: chords.map(parseChord), meter: m, tempo, countInBars: 0, backing });
+      const transport = createTransport({ progression: chords.map(parseBar), meter: m, tempo, countInBars: 0, backing });
       transport.start();
       lounge = { transport, backing };
     } catch {
@@ -6553,7 +6614,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     let allowed = null;
     if (session && !session.demo && session.help !== 'none') {
       const position = session.transport.positionAt();
-      if (!position.countIn) allowed = session.evaluator.allowedPitchClasses(position.bar);
+      if (!position.countIn) allowed = session.evaluator.allowedPitchClasses(position.bar, position.barFraction);
     }
     for (const n of held) pressed.set(n, feedback.get(n) ?? (allowed ? (allowed.includes(pitchClass(n)) ? 'good' : 'bad') : 'neutral'));
     const demoRunning = view.now !== null && view.now !== undefined;

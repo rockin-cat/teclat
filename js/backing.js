@@ -339,8 +339,11 @@ export function createBacking({ style = 'rock', chords = true, volume = -6, metr
       if (up && s.backbeat) strum(s, 0.25, 0.4, false);
       if (!up && s.pulse === 0) comp(s, 0.3, 0.5);
       if (!up && s.backbeat) strum(s, 0.3, 0.3);
-      // Boogie line: 1 3 5 6 b7 6 5 3 on the swung eighths.
-      const line = [0, third(s.chord), 7, 9, 10, 9, 7, third(s.chord)];
+      // Boogie line on the swung eighths: 1 3 5 6 b7 6 5 3 on a major chord;
+      // on a minor one 1 b3 5 b7 8 b7 5 b3, so no major sixth sneaks in
+      // (over Em in G major, a C# makes the chord sound major).
+      const minorChord = third(s.chord) === 3;
+      const line = minorChord ? [0, 3, 7, 10, 12, 10, 7, 3] : [0, third(s.chord), 7, 9, 10, 9, 7, third(s.chord)];
       const index = (s.pulse * 2 + (up ? 1 : 0)) % line.length;
       playBass(s, interval(s.chord, line[index]), up ? 0.33 : 0.66, up ? 0.6 : 0.85);
     },
@@ -358,7 +361,7 @@ export function createBacking({ style = 'rock', chords = true, volume = -6, metr
         if (s.pulse === 0 || (s.pulses === 4 && s.pulse === 2)) kickAt(s, 0.7);
         if (s.backbeat) rimAt(s, 0.6);
         if (s.pulse === 0) {
-          padChord(s, s.pulses);
+          padChord(s, s.splitBar ? s.pulses / 2 : s.pulses);
           const half = s.pulses >= 4 ? s.pulses / 2 : s.pulses;
           playBass(s, bassRoot(s.chord), half, 0.8);
         } else if (s.pulses >= 4 && s.pulse === s.pulses / 2) {
@@ -588,7 +591,7 @@ export function createBacking({ style = 'rock', chords = true, volume = -6, metr
    * Plays one grid step. `pulse` is the felt beat within the bar and `sub` the
    * step within that pulse (0 … subsPerPulse-1).
    */
-  function playStep({ time, countIn, chord, nextChord, bar, pulse, sub, subsPerPulse, pulses, compound, pulseSeconds }) {
+  function playStep({ time, countIn, chord, nextChord, bar, pulse, sub, subsPerPulse, pulses, compound, pulseSeconds, splitBar = false }) {
     const frac = sub / subsPerPulse;
     const is = (f) => Math.abs(frac - f) < 1e-6;
     // The cycle is lined up with the first bar the student plays, so the bar
@@ -600,6 +603,7 @@ export function createBacking({ style = 'rock', chords = true, volume = -6, metr
       time,
       chord: playedChord,
       next: nextPlayed,
+      splitBar: splitBar && !harmony,
       bar,
       pulse,
       sub,
@@ -639,6 +643,12 @@ export function createBacking({ style = 'rock', chords = true, volume = -6, metr
     }
     if (styleId !== 'metronome') guitarLick(s);
     (styles[styleId] ?? styles.rock)(s);
+    // Two chords in the bar: whatever the style does, the second chord is
+    // marked when it comes in (half bar), with the piano and the bass.
+    if (s.splitBar && s.sub === 0 && s.pulse === s.pulses / 2 && styleId !== 'metronome') {
+      comp(s, s.pulses / 2, 0.5);
+      playBass(s, bassRoot(s.chord), 1, 0.85);
+    }
   }
 
   return {

@@ -57,6 +57,9 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
   const demoBars = new Set(); // bars the program plays itself: nothing is judged
 
   const barAt = (ticks) => Math.floor((ticks - transport.barStartTicks(0)) / transport.barTicks);
+  /** The chord of a bar model at a tick: the second one from half bar on, when there are two. */
+  const chordAtTick = (model, ticks) => (model.chord.second && ticks >= model.startTick + transport.barTicks / 2 ? model.chord.second : model.chord);
+  const chordOf = (model, onset) => onset?.chord ?? model.chord;
 
   function barModel(bar) {
     if (bar < 0) return null;
@@ -65,6 +68,8 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       const startTick = transport.barStartTicks(bar);
       const model = { bar, card, chord: transport.chordForBar(bar), startTick, endTick: startTick + transport.barTicks, demo: demoBars.has(bar) };
       Object.assign(model, card.type === 'melodic' ? melodicExpectations(model) : card.type === 'contour' ? contourExpectations(model) : rhythmicExpectations(model));
+      // Two chords in the bar ("C G"): every attack is judged against the one sounding at its moment.
+      if (model.chord.second) for (const onset of model.onsets ?? []) onset.chord = chordAtTick(model, onset.tick);
       bars.set(bar, model);
     }
     return bars.get(bar);
@@ -199,7 +204,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       const pc0 = pitchClass(note);
       open = candidates.find(({ model, onset }) => onset.status === 'pending'
         && onset.notes.length && ticks - onset.notes[0].ticks <= lateChord
-        && model.chord.triad.includes(pc0)
+        && chordOf(model, onset).triad.includes(pc0)
         && !onset.notes.some((n) => pitchClass(n.note) === pc0));
     }
     if (!open) {
@@ -207,11 +212,12 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       // the chord that is coming instead of being read as a doubling of the one
       // before (Do → La m share the Do, and the Do was being eaten).
       const pc0 = pitchClass(note);
-      const here = barModel(bar)?.chord.symbol ?? candidates[0]?.model.chord.symbol;
+      const hereModel = barModel(bar);
+      const here = (hereModel ? chordAtTick(hereModel, ticks) : chordOf(candidates[0]?.model, candidates[0]?.onset))?.symbol;
       open = candidates.find(({ model, onset }) => onset.status === 'pending'
         && onset.tick > ticks && onset.tick - ticks <= earlyGrace
-        && model.chord.symbol !== here
-        && (level === 1 ? model.chord.root === pc0 : model.chord.triad.includes(pc0)));
+        && chordOf(model, onset).symbol !== here
+        && (level === 1 ? chordOf(model, onset).root === pc0 : chordOf(model, onset).triad.includes(pc0)));
     }
 
     if (!open) {
@@ -219,7 +225,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       if (nearest && accepts(nearest.onset, ticks)) {
         // That attack was already judged: doubling the right note is fine, anything else is not.
         const { model, onset } = nearest;
-        const allowed = level === 1 ? [model.chord.root] : model.chord.triad;
+        const allowed = level === 1 ? [chordOf(model, onset).root] : chordOf(model, onset).triad;
         if (onset.status === 'hit' && allowed.includes(pitchClass(note))) {
           console.log(`${tag} ${name} doubles the attack on ${beatLabel(onset)}, ignored`);
         } else {
@@ -240,7 +246,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
     }
 
     const { model, onset } = open;
-    const { chord } = model;
+    const chord = chordOf(model, onset);
     const pc = pitchClass(note);
 
     if (level === 1) {
@@ -609,11 +615,12 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       });
       return items;
     }
-    const keys =
-      level === 1 ? [noteAtOrAbove(chord.root, 60)]
-      : level === 4 ? [noteAtOrAbove(chord.root, 43), ...voicingFor(bar)]
-      : voicingFor(bar);
-    return model.onsets.map((o) => ({ startTick: o.tick, endTick: o.endTick, status: status(o.status), notes: keys }));
+    const keysOf = (c) => (
+      level === 1 ? [noteAtOrAbove(c.root, 60)]
+      : level === 4 ? [noteAtOrAbove(c.root, 43), ...(c === chord ? voicingFor(bar) : triadNotes(c))]
+      : c === chord ? voicingFor(bar) : triadNotes(c));
+    const keys = keysOf(chord);
+    return model.onsets.map((o) => ({ startTick: o.tick, endTick: o.endTick, status: status(o.status), notes: o.chord && o.chord !== chord ? keysOf(o.chord) : keys }));
   }
 
   // Right-hand chord shown on the keyboard. With inversions on, each chord takes
@@ -649,10 +656,11 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
   }
 
   /** Pitch classes that count as right in `bar`, for colouring pressed keys. */
-  function allowedPitchClasses(bar) {
+  function allowedPitchClasses(bar, fraction = 0) {
     const model = barModel(bar);
     if (!model) return null;
-    return level === 1 ? [model.chord.root] : level === 3 ? model.chord.tones : model.chord.triad;
+    const chord = model.chord.second && fraction >= 0.5 ? model.chord.second : model.chord;
+    return level === 1 ? [chord.root] : level === 3 ? chord.tones : chord.triad;
   }
 
   return { noteOn, noteOff, update, describeBar, markersForBar, guideForBar, allowedPitchClasses, expectsNow, entersSoon, setDemo, isDemo, forgetFrom, contourHint };
