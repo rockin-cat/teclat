@@ -1406,7 +1406,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           el('em', { textContent: pr.total ? `${pr.ok} de ${pr.total}${pr.touched && pr.touched > pr.ok ? ` · ${pr.touched - pr.ok} en marxa` : ''}` : '—' }),
         ]),
       ]);
-      b.addEventListener('click', () => { routeLevelOpen = lv.n; showRoute(); });
+      b.addEventListener('click', () => openLevel(lv));
       return b;
     };
     setChildren(mapScreen,
@@ -1471,6 +1471,28 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     if (step.voice) m.voice = step.voice;
     if (step.sounds) m.sounds = step.sounds;
     openMission(m);
+  }
+
+  /**
+   * Entering a level from the poster = going straight to play: the first step
+   * of the level not yet at «Ja ho tens!» («com a l'assaig» last), as in the
+   * guitar and bass game. The level's steps are then a strip on the play
+   * screen, not another menu.
+   */
+  function openLevel(level) {
+    const mine = routeEntries().filter((e) => e.level === level);
+    const entry = mine.find((e) => routeBest(e.key) !== 'ok' && !e.step.rehearsal) ?? mine.find((e) => routeBest(e.key) !== 'ok') ?? mine[0];
+    if (entry) openStep(entry);
+  }
+  /** The strip of a level's steps on the play screen: numbered dots, the current one lit, coloured by the level reached. */
+  function stepStrip(entry) {
+    const mine = routeEntries().filter((e) => e.level === entry.level);
+    return el('div', { className: 'step-strip', title: 'Els passos d\'aquest nivell' }, mine.map((e, j) => {
+      const best = routeBest(e.key);
+      const b = el('button', { type: 'button', className: `ss-dot${e.key === entry.key ? ' cur' : ''}${best ? ` b-${best}` : ''}${e.step.rehearsal ? ' rehearsal' : ''}`, textContent: e.step.rehearsal ? '🎸' : String(j + 1), title: `${j + 1}. ${e.title}${best ? ` · ${NIVELLS[best]}` : ''}` });
+      b.addEventListener('click', () => { if (e.key !== entry.key) openStep(e); });
+      return b;
+    }));
   }
 
   const routeNeighbours = (entry) => {
@@ -1646,7 +1668,10 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     missionScreen.hidden = false;
     showScore(false);
     showKeyboard(false);
-    hud.replaceChildren(el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Nivell ${entry.level.n} · ${entry.level.titol}` }), el('strong', { textContent: entry.title })]));
+    hud.replaceChildren(
+      el('span', { className: 'ptile-num hud-level', textContent: String(entry.level.n), title: entry.level.titol }),
+      el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Nivell ${entry.level.n} · ${entry.level.titol}` }), el('strong', { textContent: entry.title }), stepStrip(entry)]),
+    );
     missionStars.textContent = '';
     const world = one.worlds.find((w) => w.id.endsWith(':ritme-roda')) ?? one.worlds[0];
     const back = button('← Full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost');
@@ -2562,13 +2587,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     refreshLevelPill();
     showScore(false);
     renderHud(worldIndex);
-    if (mission.route) {
-      const e = mission.route;
-      hud.replaceChildren(
-        el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Full de ruta · Nivell ${e.level.n} · ${e.level.titol}` }), el('strong', { textContent: e.title })]),
-        el('div', { className: 'play-hud-progress' }, [el('small', { textContent: e.text })]),
-      );
-    }
+    backButton.textContent = mission.route ? '← Pòster' : '← Mapa';
+    if (mission.route) renderRouteHud();
     updateStars();
     feedback = new Map();
     view = { marks: new Map(), message: '' };
@@ -2657,9 +2677,21 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     hudRefresh();
   }, 'ghost small');
 
+  /** On the route: the level, the step and the strip of the level's steps (the missions' own HUD stays out). */
+  function renderRouteHud() {
+    const e = mission.route;
+    hud.replaceChildren(
+      el('span', { className: 'ptile-num hud-level', textContent: String(e.level.n), title: e.level.titol }),
+      el('div', { className: 'play-hud-text' }, [el('small', { textContent: `Nivell ${e.level.n} · ${e.level.titol}` }), el('strong', { textContent: e.title }), stepStrip(e)]),
+      el('div', { className: 'play-hud-progress' }, [el('small', { textContent: e.text })]),
+      hudTools(keysButton()),
+    );
+  }
+
   function renderHud(worldIndex) {
     hudRefresh = () => renderHud(worldIndex);
     if (mission.adaptive) return renderAdaptiveHud();
+    if (mission.route) return renderRouteHud();
     const world = mission.world;
     const learned = learnedBefore(mission.index);
     const current = mission.type === 'chord' ? mission.chord : null;
@@ -6426,10 +6458,13 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const phrase = { notes: [], from: -1 };
 
     const hudNow = (text) => {
+      const onRoute = section === 'ruta' && routeEntry?.kind === 'improv' ? routeEntry : null;
       hud.replaceChildren(
+        onRoute ? el('span', { className: 'ptile-num hud-level', textContent: String(onRoute.level.n), title: onRoute.level.titol }) : el('span', { hidden: true }),
         el('div', { className: 'play-hud-text' }, [
-          el('small', { textContent: `Improvisa · ${MODES.find((m) => m.id === mode)?.label}` }),
-          el('strong', { textContent: song.name }),
+          el('small', { textContent: onRoute ? `Nivell ${onRoute.level.n} · ${onRoute.level.titol}` : `Improvisa · ${MODES.find((m) => m.id === mode)?.label}` }),
+          el('strong', { textContent: onRoute ? onRoute.title : song.name }),
+          onRoute ? stepStrip(onRoute) : null,
         ]),
         el('div', { className: 'play-hud-goal' }, [
           el('small', { textContent: 'La roda' }),

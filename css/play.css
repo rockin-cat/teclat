@@ -4442,3 +4442,67 @@ body.music-on .score-legend {
 .play-choice.change.open {
   border-color: var(--play-cyan);
 }
+
+/* ---- The level's steps as a strip on the play screen (no extra menu) ---- */
+
+.play-hud .hud-level {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  --c: #1fb6e3;
+}
+
+.step-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ss-dot {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--play-muted);
+  background: rgb(255 255 255 / 6%);
+  border: 2px solid var(--play-line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ss-dot.b-no {
+  background: rgb(255 159 67 / 25%);
+  border-color: #ff9f43;
+  color: #ffd2a8;
+}
+
+.ss-dot.b-gairebe {
+  background: rgb(255 216 77 / 22%);
+  border-color: #ffd84d;
+  color: #ffe9a3;
+}
+
+.ss-dot.b-ok {
+  background: rgb(53 179 107 / 28%);
+  border-color: #35b36b;
+  color: #b9f0cf;
+}
+
+.ss-dot.cur {
+  color: #1d1d1f;
+  background: var(--play-cyan);
+  border-color: var(--play-cyan);
+  transform: scale(1.12);
+}
+
+.ss-dot:hover {
+  border-color: #fff;
+}
+
+body.music-on .step-strip {
+  display: none;
+}
