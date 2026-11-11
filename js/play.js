@@ -971,7 +971,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     if (['ruta', 'ruta-song', 'decisions', 'backpack'].includes(screen) && me() && !me().hands && !me().teacher) screen = 'hands';
     if (screen === 'ruta') return showRoute();
     if (screen === 'ruta-song') return showRouteSong();
-    if (screen === 'decisions') return showDecisions();
+    if (screen === 'decisions') { backpackTab = 'com'; return showBackpack(); }
     if (screen === 'backpack') return showBackpack();
     if (screen === 'songs') return showSongs();
     if (screen === 'creator') return showCreator();
@@ -1344,8 +1344,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       }, 'ghost small'),
     ]);
     const tools = el('div', { className: 'route-tools' }, [
-      button('Què sé fer', () => { screen = 'backpack'; showMap(); }, 'ghost small'),
-      button('Com tries el teu camí', () => { screen = 'decisions'; showMap(); }, 'ghost small'),
+      button('Què sé fer', () => { backpackTab = 'banda'; screen = 'backpack'; showMap(); }, 'ghost small'),
+      button('Com t’estudies', () => { backpackTab = 'com'; screen = 'backpack'; showMap(); }, 'ghost small'),
       button('Prova de nivell', () => placementTest(), 'ghost small'),
       handsChip(),
       button('Camí clàssic', () => { section = 'juga'; screen = 'map'; showMap(); }, 'ghost small'),
@@ -1755,20 +1755,91 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     toTop();
   }
 
+  // «Què sé fer»: tres pestanyes, com a les altres eines (A la banda · Com vas · Historial)
+  let backpackTab = 'banda';
+  function backpackTabs() {
+    return el('div', { className: 'qsf-tabs', role: 'tablist' }, [['banda', 'A la banda'], ['com', 'Com vas'], ['hist', 'Historial']].map(([id, label]) => {
+      const b = el('button', { type: 'button', className: 'qsf-tab', textContent: label });
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', String(id === backpackTab));
+      b.addEventListener('click', () => { backpackTab = id; showBackpack(); });
+      return b;
+    }));
+  }
+  const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const capFirst = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  /** «Com vas»: primer, com t'estudies (com et va l'intent següent després de cada estratègia que tries). */
+  function comVasBox(entries, store) {
+    const all = (me()?.choices ?? []).filter((c) => c.title);
+    const D = all.filter((c) => c.choice && c.choice !== 'done');
+    const dies = new Set(all.map((c) => new Date(c.t).toISOString().slice(0, 10))).size;
+    const fets = entries.filter((e) => store[e.key]?.best === 'ok').length;
+    const kpi = (v, s) => el('div', { className: 'qsf-kpi', innerHTML: `<b>${v}</b><span>${s}</span>` });
+    const intro = '<h3>Com t’estudies</h3><p class="play-note">Quan acabes un pas, tries com continuar: baixar el tempo, posar ajuda, practicar només el que falla… Aquí veus quines d’aquestes estratègies t’ajuden a millorar. El que compta és com et va l’intent següent.</p>';
+    let html;
+    if (D.length < CHOICES_MIN) html = `${intro}<p class="qsf-buit">Has triat ${D.length} ${D.length === 1 ? 'vegada' : 'vegades'}. A partir de ${CHOICES_MIN} tries, aquí veuràs què et funciona.</p>`;
+    else {
+      const rows = Object.keys(CHOICE_NAMES).filter((id) => id !== 'done').map((id) => {
+        const mine = D.filter((c) => c.choice === id);
+        if (!mine.length) return null;
+        const r = mine.filter((c) => c.nextLevel !== undefined && c.nextLevel !== null);
+        const g = r.filter((c) => c.nextLevel > c.level || (c.level === 2 && c.nextLevel === 2)).length;
+        const w = r.filter((c) => c.nextLevel < c.level).length;
+        return { id, n: mine.length, r: r.length, g, s: r.length - g - w, w };
+      }).filter(Boolean).sort((a, b) => b.n - a.n);
+      const pc = (x, r) => (r ? (x / r) * 100 : 0);
+      const recent = recentDecisions(me()?.choices ?? [], 8);
+      html = `${intro}<ul class="qsf-ins">${observeChoices(me()?.choices ?? []).map((x) => `<li>${x}</li>`).join('')}</ul>
+        <h4>Cada estratègia, i com t’ha anat després</h4>
+        <div class="qsf-taula">${rows.map((x) => `<div class="qsf-row"><span class="nm">${esc(capFirst(CHOICE_NAMES[x.id]))}</span><span class="n">${x.n}×</span><span class="qsf-bar" title="Després: millor ${x.g} · igual ${x.s} · pitjor ${x.w}">${x.r ? `<i class="g" style="width:${pc(x.g, x.r)}%"></i><i class="s" style="width:${pc(x.s, x.r)}%"></i><i class="w" style="width:${pc(x.w, x.r)}%"></i>` : ''}</span><b>${x.r ? `${x.g} de ${x.r}` : '—'}</b></div>`).join('')}</div>
+        <p class="qsf-llegenda"><span><i class="g"></i>t’ha anat millor</span><span><i class="s"></i>igual</span><span><i class="w"></i>pitjor</span><span>«3 de 5»: millor 3 de les 5 vegades que hem pogut veure l’intent següent</span></p>
+        ${recent.length ? `<details class="play-choices-recent"><summary>Les teves últimes decisions</summary><ul>${recent.map((x) => `<li>${x}</li>`).join('')}</ul></details>` : ''}`;
+    }
+    const gapsN = {};
+    for (const c of all.slice(-20)) for (const g of String(c.gaps ?? '').split(' · ').filter(Boolean)) gapsN[g] = (gapsN[g] ?? 0) + 1;
+    const topGap = Object.entries(gapsN).sort((a, b) => b[1] - a[1])[0];
+    return el('div', { className: 'qsf-com' }, [
+      el('div', { className: 'play-world qsf-estrat', innerHTML: html }),
+      el('div', { className: 'qsf-dreta' }, [
+        el('div', { className: 'qsf-kpis' }, [kpi(`${fets}/${entries.length}`, 'passos a «Ja ho tens!»'), kpi(all.length, 'vegades que has tocat un pas'), kpi(dies, dies === 1 ? 'dia que has practicat' : 'dies que has practicat')]),
+        el('div', { className: 'play-world' }, [
+          el('h3', { textContent: 'Què et convé practicar' }),
+          topGap ? el('p', { className: 'play-note', innerHTML: `El que més t’ha faltat últimament: <b>${esc(topGap[0])}</b> (${topGap[1]} ${topGap[1] === 1 ? 'vegada' : 'vegades'}).` }) : null,
+          el('div', { className: 'play-buttons left' }, [button('▶ Continua el full de ruta', () => { screen = 'ruta'; showMap(); })]),
+        ]),
+      ]),
+    ]);
+  }
+  function historialBox() {
+    const R = (me()?.choices ?? []).filter((c) => c.title).slice(-60).reverse();
+    if (!R.length) return el('div', { className: 'play-world' }, [el('p', { className: 'play-note', textContent: 'Encara no has tocat cap pas del full de ruta. Quan en toquis, aquí sortiran.' })]);
+    const fmt = (x) => new Date(x).toLocaleString('ca', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const cls = ['no', 'gairebe', 'ok'];
+    const fx = (c) => (c.nextLevel === undefined || c.nextLevel === null ? '' : c.nextLevel > c.level ? ' <span class="qsf-fx g">↑</span>' : c.nextLevel < c.level ? ' <span class="qsf-fx w">↓</span>' : ' <span class="qsf-fx s">=</span>');
+    return el('div', { className: 'play-world qsf-hist', innerHTML: `<h3>Les últimes vegades que has tocat</h3><table><thead><tr><th>Quan</th><th>Pas</th><th>On eres</th><th>Què et va faltar</th><th>Què vas triar</th></tr></thead><tbody>${R.map((c) => `<tr><td>${fmt(c.t)}</td><td>${esc(c.title)}</td><td><span class="qsf-niv ${cls[c.level] ?? ''}">${LEVEL_NAMES[c.level] ?? ''}</span></td><td>${esc(c.gaps ?? '') || '—'}</td><td>${c.choice ? `${esc(capFirst(c.cl ?? CHOICE_NAMES[c.choice] ?? c.choice))}${fx(c)}` : '—'}</td></tr>`).join('')}</tbody></table>` });
+  }
+
   function showBackpack() {
     const spec = routeSpec();
     const entries = routeEntries();
     const store = routeStore();
     const reached = ROUTE.filter((l) => routeDone(entries, l));
-    setChildren(mapScreen,
-      el('div', { className: 'play-hello' }, [
-        el('div', { className: 'play-hello-text' }, [
-          el('div', { className: 'play-kicker', textContent: `Full de ruta · ${spec.name}` }),
-          el('h2', { textContent: 'Què sé fer' }),
-          el('p', { className: 'play-note', textContent: 'Un nivell compta com a assolit quan hi tens algun pas a «Ja ho tens!». Això és el que ja pots portar al grup.' }),
-        ]),
-        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost'), button('Imprimeix', () => window.print(), 'ghost small')]),
+    const head = el('div', { className: 'play-hello' }, [
+      el('div', { className: 'play-hello-text' }, [
+        el('div', { className: 'play-kicker', textContent: `Full de ruta · ${spec.name}` }),
+        el('h2', { textContent: 'Què sé fer' }),
+        backpackTabs(),
       ]),
+      el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost'), button('Imprimeix', () => window.print(), 'ghost small')]),
+    ]);
+    if (backpackTab !== 'banda') {
+      setChildren(mapScreen, head, backpackTab === 'com' ? comVasBox(entries, store) : historialBox());
+      toTop();
+      return;
+    }
+    setChildren(mapScreen,
+      head,
+      el('p', { className: 'play-note', textContent: 'Un nivell compta com a assolit quan hi tens algun pas a «Ja ho tens!». Això és el que ja pots portar al grup.' }),
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'A la banda ja pots…' }),
         reached.length ? el('ul', {}, reached.map((l) => el('li', { innerHTML: `<b>Nivell ${l.n} · ${l.titol}:</b> ${l.banda}` }))) : el('p', { className: 'play-note', textContent: 'Encara cap nivell amb un pas a «Ja ho tens!». Tria un pas del nivell 1 i comença.' }),
