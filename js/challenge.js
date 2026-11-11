@@ -231,7 +231,7 @@ export function renderMap(container, map, selected, onSelect) {
       ]);
       const chips = tier.items.map(({ card, passed, skipped, unlocked, help }) => {
         const target = { kind: 'card', card, tier: tier.id };
-        const mark = passed ? HELP[help ?? 0].mark : skipped ? '⏭' : '';
+        const mark = passed ? HELP[help ?? 0].mark : skipped ? '»' : '';
         const button = el('button', {
           type: 'button',
           className: `card-chip${passed ? ' passed' : ''}${skipped ? ' skipped' : ''}${help === 2 ? ' mastered' : ''}${sameTarget(target, selected) ? ' active' : ''}`,

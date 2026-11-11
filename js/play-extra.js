@@ -246,7 +246,7 @@ export function changeDiagram({ from, to, a, b, key = 'C', names = true, compact
     if (m.from === m.to && m.fa === m.fb) {
       dot(m.from, yA(m.from), '#3ddc84', '#0d2b1a', String(m.fa));
       const pin = svgEl('text', { x: x.get(m.from), y: yA(m.from) - r - 3, 'text-anchor': 'middle', 'font-size': r * 1.5 });
-      pin.textContent = '📌';
+      pin.textContent = '●';
       g.append(pin);
     } else {
       dot(m.from, yA(m.from), da.colour, da.ink, String(m.fa));
@@ -272,7 +272,7 @@ export function changeDiagram({ from, to, a, b, key = 'C', names = true, compact
     const x2 = x.get(B[2]);
     const y = TOP * 0.42;
     const hand = svgEl('text', { x: left ? Math.max(x1, x2) + 4 : Math.min(x1, x2) - 4, y: y + 6, 'text-anchor': left ? 'start' : 'end', 'font-size': compact ? 14 : 18 });
-    hand.textContent = '✋';
+    hand.textContent = 'mà';
     svg.append(
       svgEl('path', { d: `M${left ? Math.max(x1, x2) : Math.min(x1, x2)},${y} L${left ? Math.min(x.get(B[0]), x1) : Math.max(x2, x.get(A[2]))},${y}`, stroke: '#1d1d1f', 'stroke-width': compact ? 3 : 4, fill: 'none', 'marker-end': `url(#${id})` }),
       hand,
@@ -299,8 +299,8 @@ export function changeLegend({ from, to, key = 'C', a, b }) {
     chip(from, 'ara'),
     el('span', { className: 'cd-arrow', textContent: '➜' }),
     chip(to, 'després'),
-    kept ? el('span', { className: 'cd-badge pin', textContent: `📌 ${kept} ${kept === 1 ? 'dit quiet' : 'dits quiets'}` }) : null,
-    shared > kept ? el('span', { className: 'cd-badge same', textContent: `🟩 ${shared - kept} ${shared - kept === 1 ? 'tecla repetida' : 'tecles repetides'}` }) : null,
+    kept ? el('span', { className: 'cd-badge pin', textContent: `${kept} ${kept === 1 ? 'dit quiet' : 'dits quiets'}` }) : null,
+    shared > kept ? el('span', { className: 'cd-badge same', textContent: `${shared - kept} ${shared - kept === 1 ? 'tecla repetida' : 'tecles repetides'}` }) : null,
   ]);
 }
 
@@ -457,7 +457,7 @@ export function renderSheet({ path, cards, student }) {
         el('section', {}, [
           el('h3', { textContent: 'Els canvis' }),
           el('div', { className: 'sheet-changes' }, changes),
-          el('p', { className: 'sheet-hint', textContent: 'Número = dit · fletxa = on va el dit · 📌 = el dit no es mou · verd = tecla dels dos acords.' }),
+          el('p', { className: 'sheet-hint', textContent: 'Número = dit · fletxa = on va el dit · ● = el dit no es mou · verd = tecla dels dos acords.' }),
         ]),
         invBox,
       ]),

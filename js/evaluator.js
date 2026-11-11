@@ -154,7 +154,7 @@ export function createEvaluator({ level, transport, deck, onResult, inversions =
       console.log(`${tag} (example bar ${model.bar + 1}) ${verdict} · ${message}`);
       return;
     }
-    console.log(`${tag} ${verdict === 'hit' ? '✅ HIT ' : '❌ MISS'} bar ${model.bar + 1} ${model.chord.symbol} · ${message}`);
+    console.log(`${tag} ${verdict === 'hit' ? 'HIT ' : 'MISS'} bar ${model.bar + 1} ${model.chord.symbol} · ${message}`);
     const fraction = detail.tick === undefined ? undefined : (detail.tick - model.startTick) / transport.barTicks;
     onResult?.({ verdict, bar: model.bar, message, ...detail, fraction });
   }

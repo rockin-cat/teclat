@@ -306,7 +306,7 @@ ui.fullscreen.addEventListener('click', () => {
 document.addEventListener('fullscreenchange', () => {
   const on = document.fullscreenElement === ui.stage;
   ui.stage.classList.toggle('is-fullscreen', on);
-  ui.fullscreen.textContent = on ? '✕ Surt de pantalla completa' : '⛶ Pantalla completa';
+  ui.fullscreen.textContent = on ? '✕ Surt de pantalla completa' : 'Pantalla completa';
   if (!on) fullscreenLeftAt = performance.now();
   // The result dialog must live inside the full-screen element to be seen.
   (on ? ui.stage : document.body).append(ui.result);
@@ -367,7 +367,7 @@ function updateControls() {
   ui.form.classList.toggle('playing', playing);
   for (const control of lockedWhilePlaying()) control.disabled = playing;
   ui.stop.disabled = !playing;
-  ui.start.textContent = !playing ? '▶ Comença' : session.transport.paused ? '▶ Continua' : '❚❚ Pausa';
+  ui.start.textContent = !playing ? '▶ Comença' : session.transport.paused ? '▶ Continua' : '❚Pausa';
   const exam = playing ? session.target?.kind === 'exam' : mode() === 'challenge' && challengeTarget?.kind === 'exam';
   ui.demo.disabled = exam || Boolean(playing && session.demoUntil !== null && session.demoUntil > (session.lastBar ?? -1));
   const cardTarget = playing ? session.target?.kind === 'card' : mode() === 'challenge' && challengeTarget?.kind === 'card';
@@ -904,7 +904,7 @@ function switchCard(card, fromRound) {
   if (session.shownCard) showNextCard(session.shownBar, session.shownCard);
 }
 
-/** Jumps over a card that doesn't come out: the next one opens, and this one stays pending (⏭). */
+/** Jumps over a card that doesn't come out: the next one opens, and this one stays pending (»). */
 function skipCard() {
   if (mode() !== 'challenge') return;
   const target = session ? session.target : challengeTarget;
@@ -924,16 +924,16 @@ function skipCard() {
     switchCard(next.card, fromRound);
     session.target = next;
     challengeTarget = next;
-    showRoundBanner('info', `${cardLabel(target.card)} saltada ⏭`, `Següent: ${cardLabel(next.card)}, a partir de la volta ${fromRound + 1}. La carta saltada la pots tornar a provar quan vulguis.`);
+    showRoundBanner('info', `${cardLabel(target.card)} saltada`, `Següent: ${cardLabel(next.card)}, a partir de la volta ${fromRound + 1}. La carta saltada la pots tornar a provar quan vulguis.`);
     showChallengeStatus();
     refreshMapQuietly();
     return;
   }
   challengeTarget = map.find((t) => t.id === target.tier)?.examUnlocked ? { kind: 'exam', tier: target.tier } : defaultTarget(map);
   stop();
-  showDialog('Carta saltada ⏭', '', challengeTarget?.kind === 'exam'
+  showDialog('Carta saltada', '', challengeTarget?.kind === 'exam'
     ? 'Ja no queden més cartes per provar en aquesta dificultat: pots fer el repte final (prem Espai) o tornar a les cartes saltades quan vulguis.'
-    : 'Ja no queden més cartes per provar en aquesta dificultat. Torna a provar les cartes saltades (⏭) quan vulguis.');
+    : 'Ja no queden més cartes per provar en aquesta dificultat. Torna a provar les cartes saltades (») quan vulguis.');
 }
 
 /** Redraws the map while playing, so the chips show the new state. */

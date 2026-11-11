@@ -11,6 +11,7 @@
 // Each card has its own small canvas, redrawn only when it changes, so drawing
 // stays cheap while the music plays.
 
+import { icona } from './icones.js';
 import { melodicSlots } from './cards.js';
 
 const ASPECT = 1.6; // width / height of the visible band of a card
@@ -137,7 +138,7 @@ export function createScore(container) {
         }
         if (bar.kind === 'demo') {
           cover = el('div', { className: 'score-cover' }, [
-            el('span', { className: 'score-hand', textContent: '✋', ariaHidden: 'true' }),
+            icona('ma', 'score-hand'),
             el('strong', { textContent: 'Escolta' }),
           ]);
           cardBox.append(cover);

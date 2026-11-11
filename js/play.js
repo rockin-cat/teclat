@@ -13,6 +13,7 @@
 // teacher view shows everyone's progress. Besides the built-in ROCKIN path, a
 // teacher can build a path for any chord wheel and meter.
 
+import { icona, iconaHtml } from './icones.js';
 import { ROCKIN_PATH, SPEEDS, WORKSHOP_PATH, buildPath, chordName, makePath, triadNoteNames } from './missions.js';
 import { barChords, contourNotes, parseBar, parseChord, parseTimeSignature, pitchClass, splitChord, mod } from './theory.js';
 import { STYLES, createBacking, dominantOf, pedalHarmony } from './backing.js';
@@ -52,7 +53,7 @@ const SHAPE_NEXT = '#ffb37a';
 const SHARED = '#7ee2a8';
 const COUNT = '#b9e6ff';
 const SPLIT = 60; // two hands: notes below middle C are the left hand
-const GLYPH = { arpeggio: '⤴', 'probe-chords': '🧱', 'probe-changes': '⇄', find: '🔍', jump: '↷', build: '🧱', rush: '⏱', lesson: '?', chord: '♫', change: '⇄', steps: '⋯', pattern: '♩', mix: '◆', song: '♬', structure: '§', band: '♪♪', invert: '↻' };
+const GLYPH = { arpeggio: '⤴', 'probe-chords': '▦', 'probe-changes': '⇄', find: '◎', jump: '↷', build: '▦', rush: '◷', lesson: '?', chord: '♫', change: '⇄', steps: '⋯', pattern: '♩', mix: '◆', song: '♬', structure: '§', band: '♪♪', invert: '↻' };
 const TYPE_LABEL = {
   find: 'Troba la nota',
   jump: 'Salta tecles',
@@ -232,7 +233,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   document.body.append(sheetBox);
 
   const backButton = el('button', { type: 'button', className: 'play-btn ghost small', textContent: '← Mapa' });
-  const fullButton = el('button', { type: 'button', className: 'play-btn ghost small', textContent: '⛶ Pantalla completa', title: 'La carta i el teclat ocupen tota la pantalla (tecla F)' });
+  const fullButton = el('button', { type: 'button', className: 'play-btn ghost small', textContent: 'Pantalla completa', title: 'La carta i el teclat ocupen tota la pantalla (tecla F)' });
   const hud = el('div', { className: 'play-hud' });
   const missionStars = el('div', { className: 'play-stars' });
   const panel = el('div', { className: 'play-panel' });
@@ -280,7 +281,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const on = el2 === root || el2 === missionScreen;
     missionScreen.classList.toggle('is-fullscreen', on);
     root.classList.toggle('is-fullscreen', on);
-    fullButton.textContent = on ? '✕ Surt' : '⛶ Pantalla completa';
+    fullButton.textContent = on ? '✕ Surt' : 'Pantalla completa';
   };
   document.addEventListener('fullscreenchange', onFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
@@ -324,9 +325,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   // keyboard paints both hands and stars are kept apart for each way.
 
   const HANDS = {
-    1: { label: '✋ Una mà', short: 'una mà' },
-    chord: { label: '🙌 Dues mans: el mateix acord', short: 'dues mans (el mateix acord)' },
-    bass: { label: '🙌 Dues mans: l\'esquerra fa el baix', short: 'dues mans (esquerra al baix)' },
+    1: { label: 'Una mà', short: 'una mà' },
+    chord: { label: 'Dues mans: el mateix acord', short: 'dues mans (el mateix acord)' },
+    bass: { label: 'Dues mans: l\'esquerra fa el baix', short: 'dues mans (esquerra al baix)' },
   };
   const handsMode = () => (HANDS[me()?.hands] ? me().hands : 1);
 
@@ -385,7 +386,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const st = me();
     const option = (mode, art, title, text) => {
       const b = el('button', { type: 'button', className: `play-hands-option${handsMode() === mode && st.hands ? ' on' : ''}` }, [
-        el('span', { className: 'play-hands-art', textContent: art }),
+        icona(art, 'play-hands-art'),
         el('strong', { textContent: title }),
         el('small', { innerHTML: text }),
       ]);
@@ -891,7 +892,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     showMap();
   }
 
-  const unlockButton = () => (isTeacher() ? null : button('🔓 Desbloqueja-ho tot (mode professor)', () => {
+  const unlockButton = () => (isTeacher() ? null : button('Desbloqueja-ho tot (mode professor)', () => {
     if (!window.confirm('Mode professor: tots els camins i missions oberts per provar-ho tot. Els resultats no es guarden. Continuar?')) return;
     enterTeacherMode();
   }, 'ghost small'));
@@ -899,7 +900,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   function teacherBannerEl() {
     if (!isTeacher()) return null;
     return el('div', { className: 'play-teacher-banner' }, [
-      el('span', { innerHTML: '🔓 <b>Mode professor</b>: tot obert; els resultats no es guarden.' }),
+      el('span', { innerHTML: '<b>Mode professor</b>: tot obert; els resultats no es guarden.' }),
       button('Surt del mode professor', () => {
         store.current = null;
         saveStore();
@@ -927,16 +928,16 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       });
       return b;
     };
-    if (!songs) return el('div', { className: 'play-board-tabs' }, [tab('cami', '🎸 El camí'), tab('adapt', '🧭 Camí intel·ligent'), tab('taller', '🎹 Taller d\'acords')]);
+    if (!songs) return el('div', { className: 'play-board-tabs' }, [tab('cami', 'El camí'), tab('adapt', 'Camí intel·ligent'), tab('taller', 'Taller d\'acords')]);
     return el('div', { className: 'play-board-tabs' }, [
       button('← Totes les cançons', () => {
         screen = 'songs';
         showMap();
       }, 'ghost'),
-      tab('cami', '🎸 El camí'),
-      tab('adapt', '🧭 Camí intel·ligent'),
-      button('🖨 Fitxa', () => printSheet(), 'ghost small'),
-      button('📚 Biblioteca', () => {
+      tab('cami', 'El camí'),
+      tab('adapt', 'Camí intel·ligent'),
+      button('Fitxa', () => printSheet(), 'ghost small'),
+      button('Biblioteca', () => {
         jumpToLibrary = true;
         screen = 'songs';
         showMap();
@@ -1033,7 +1034,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         const box = el('details', { className: `play-world${current ? ' current' : ''}${done ? ' done' : ''}${locked ? ' locked' : ''}`, open: workshop || current || ((store.unlockAll || isTeacher()) && !done) });
         box.append(
           el('summary', { className: 'play-world-head' }, [
-            el('span', { className: 'play-world-number', textContent: locked ? '🔒' : done ? '✓' : String(w + 1) }),
+            locked ? icona('cadenat', 'play-world-number') : el('span', { className: 'play-world-number', textContent: done ? '✓' : String(w + 1) }),
             el('div', { className: 'play-world-text' }, [
               el('h3', { textContent: world.title }),
               locked ? el('p', { textContent: 'Acaba el món anterior per obrir-lo.' }) : el('p', { textContent: world.goal }),
@@ -1072,17 +1073,17 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         return levelHead ? [levelHead, box] : [box];
       }),
       el('div', { className: 'play-map-foot' }, [
-        button('❓ Com es juga?', () => {
+        button('Com es juga?', () => {
           screen = 'welcome';
           showMap();
         }, 'ghost small'),
-        !songs && !workshop && !st.teacher ? button('🎯 Prova de nivell', () => placementTest(), 'ghost small') : null,
+        !songs && !workshop && !st.teacher ? button('Prova de nivell', () => placementTest(), 'ghost small') : null,
         st.teacher ? null : button(`No ets ${st.name}? Canvia`, () => {
           screen = 'who';
           showMap();
         }, 'ghost small'),
         songs ? unlockButton() : null,
-        songs ? null : button('⚙ Professorat', () => {
+        songs ? null : button('Professorat', () => {
           screen = 'teacher';
           showMap();
         }, 'ghost small'),
@@ -1102,7 +1103,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const byIndex = new Map(chords.map((c) => [degreeOf(c, key).index, c]));
     return el('details', { className: 'play-keystrip' }, [
       el('summary', { className: 'play-keystrip-head' }, [
-        el('strong', { textContent: `🎨 Els colors dels acords · tonalitat de ${chordLong(key)}` }),
+        el('strong', { textContent: `Els colors dels acords · tonalitat de ${chordLong(key)}` }),
         el('span', { className: 'play-keystrip-mini' }, chords.map((c) => {
           const i = el('i', { title: chordName(c) });
           i.style.background = degreeOf(c, key).colour;
@@ -1170,11 +1171,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       }),
     ]);
     return el('div', { className: 'play-keyboard-own' }, [
-      el('h4', { textContent: '🎹 El meu teclat' }),
+      el('h4', { textContent: 'El meu teclat' }),
       el('p', { className: 'play-note', textContent: 'Perquè el teclat de la pantalla sigui idèntic al que tens sota les mans: les mateixes tecles, de la més greu a la més aguda.' }),
       current,
       presets,
-      el('div', { className: 'play-buttons left' }, [button('🎹 Detecta\'l tocant', () => showKeyCalibration(back), 'ghost small')]),
+      el('div', { className: 'play-buttons left' }, [button('Detecta\'l tocant', () => showKeyCalibration(back), 'ghost small')]),
     ]);
   }
 
@@ -1183,7 +1184,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const render = (title, text, note = '', tone = '') => {
       setChildren(mapScreen,
         el('div', { className: 'play-world play-welcome' }, [
-          el('div', { className: 'welcome-art', textContent: '🎹' }),
+          icona('teclat', 'welcome-art', 'div'),
           el('h2', { textContent: title }),
           el('p', { innerHTML: text }),
           note ? el('p', { className: `play-note${tone ? ` ${tone}` : ''}`, innerHTML: note }) : null,
@@ -1308,7 +1309,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const verdict = t.helped !== null && t.alone !== null
       ? (t.alone >= t.helped - 10 ? ' · Això ja és teu, no de la pantalla.' : t.alone >= t.helped - 25 ? ' · S\'acosta: la pantalla encara hi ajuda una mica.' : ' · Sense la pantalla cau força: toca-ho més sense ajuda.')
       : '';
-    return el('p', { className: 'route-transfer', innerHTML: `🎯 ${parts.filter(Boolean).join(' · ')}${verdict}` });
+    return el('p', { className: 'route-transfer', innerHTML: `${parts.filter(Boolean).join(' · ')}${verdict}` });
   };
 
   let routeLevelOpen = null; // the level whose steps are shown (null: the poster)
@@ -1343,11 +1344,11 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       }, 'ghost small'),
     ]);
     const tools = el('div', { className: 'route-tools' }, [
-      button('🎒 Què sé fer', () => { screen = 'backpack'; showMap(); }, 'ghost small'),
-      button('🧭 Com tries el teu camí', () => { screen = 'decisions'; showMap(); }, 'ghost small'),
-      button('🎯 Prova de nivell', () => placementTest(), 'ghost small'),
+      button('Què sé fer', () => { screen = 'backpack'; showMap(); }, 'ghost small'),
+      button('Com tries el teu camí', () => { screen = 'decisions'; showMap(); }, 'ghost small'),
+      button('Prova de nivell', () => placementTest(), 'ghost small'),
       handsChip(),
-      button('🎸 Camí clàssic', () => { section = 'juga'; screen = 'map'; showMap(); }, 'ghost small'),
+      button('Camí clàssic', () => { section = 'juga'; screen = 'map'; showMap(); }, 'ghost small'),
     ]);
     const foot = el('div', { className: 'poster-foot' }, [
       el('img', { src: 'assets/brand/rockin-wordmark-dark.png', alt: 'ROCKIN', className: 'poster-logo' }),
@@ -1368,14 +1369,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
             el('div', { className: 'poster-level-head' }, [
               el('span', { className: 'ptile-num', textContent: String(level.n) }),
               el('div', { className: 'ptile-text' }, [el('b', { textContent: level.titol }), el('small', { textContent: level.sub })]),
-              el('span', { className: 'ptile-icon', textContent: level.icona }),
+              icona(level.icona, 'ptile-icon'),
             ]),
             el('p', { className: `route-band${done ? ' on' : ''}`, innerHTML: `<b>A la banda${done ? ' ja' : ''} pots…</b> ${level.banda}` }),
             transferLine(routeTransfer(entries, level)),
             el('div', { className: 'route-steps' }, mine.map((e) => {
               const best = routeBest(e.key);
               const b = el('button', { type: 'button', className: `route-step lvl-${best ?? 'none'}${e.step.rehearsal ? ' rehearsal' : ''}` }, [
-                el('span', { className: 'route-step-text' }, [el('span', { className: 'route-step-title', textContent: `${e.step.rehearsal ? '🎸 ' : ''}${e.title}` }), el('small', { textContent: e.text })]),
+                el('span', { className: 'route-step-text' }, [el('span', { className: 'route-step-title', textContent: `${e.step.rehearsal ? '' : ''}${e.title}` }), el('small', { textContent: e.text })]),
                 routePill(best),
               ]);
               b.addEventListener('click', () => openStep(e));
@@ -1398,7 +1399,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const tile = (lv) => {
       const pr = progress(lv);
       const b = el('button', { type: 'button', className: `ptile${pr.ok ? ' done' : ''}${pr.touched && !pr.ok ? ' cur' : ''}` }, [
-        el('span', { className: 'ptile-top' }, [el('span', { className: 'ptile-num', textContent: String(lv.n) }), el('span', { className: 'ptile-icon', textContent: lv.icona })]),
+        el('span', { className: 'ptile-top' }, [el('span', { className: 'ptile-num', textContent: String(lv.n) }), icona(lv.icona, 'ptile-icon')]),
         el('b', { textContent: lv.titol }),
         el('small', { textContent: lv.sub }),
         el('span', { className: 'ptile-foot' }, [
@@ -1438,7 +1439,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         el('h3', { textContent: 'Tria' }),
         el('div', { className: 'play-songs' }, options.map((spec) => {
           const b = el('button', { type: 'button', className: `play-song${spec.id === routeSongId ? ' on' : ''}${spec.book ? ' book' : ''}` }, [
-            el('span', { className: 'play-song-icon', textContent: spec.id === ROCKIN_WHEEL_SPEC.id ? '🎸' : spec.book ? '📖' : spec.library ? '📚' : '♬' }),
+            icona(spec.id === ROCKIN_WHEEL_SPEC.id ? '🎸' : spec.book ? '📖' : spec.library ? '📚' : '♬', 'play-song-icon'),
             el('strong', { textContent: spec.name || spec.progression }),
             spec.artist ? el('small', { className: 'play-song-artist', textContent: spec.artist }) : null,
             el('div', { className: 'play-goal-chords' }, splitProgression(spec.progression).map((c) => chordChip(c, spec.key ?? keyOf(spec)))),
@@ -1489,7 +1490,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const mine = routeEntries().filter((e) => e.level === entry.level);
     return el('div', { className: 'step-strip', title: 'Els passos d\'aquest nivell' }, mine.map((e, j) => {
       const best = routeBest(e.key);
-      const b = el('button', { type: 'button', className: `ss-dot${e.key === entry.key ? ' cur' : ''}${best ? ` b-${best}` : ''}${e.step.rehearsal ? ' rehearsal' : ''}`, textContent: e.step.rehearsal ? '🎸' : String(j + 1), title: `${j + 1}. ${e.title}${best ? ` · ${NIVELLS[best]}` : ''}` });
+      const b = el('button', { type: 'button', className: `ss-dot${e.key === entry.key ? ' cur' : ''}${best ? ` b-${best}` : ''}${e.step.rehearsal ? ' rehearsal' : ''}`, textContent: e.step.rehearsal ? '★' : String(j + 1), title: `${j + 1}. ${e.title}${best ? ` · ${NIVELLS[best]}` : ''}` });
       b.addEventListener('click', () => { if (e.key !== entry.key) openStep(e); });
       return b;
     }));
@@ -1531,7 +1532,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     }
     if (more.length) {
       const change = el('button', { type: 'button', className: 'play-choice change' }, [
-        el('span', { className: 'choice-icon', textContent: '🔧' }),
+        icona('eina', 'choice-icon'),
         el('span', { className: 'choice-text' }, [el('b', { textContent: 'Canviar alguna cosa' }), el('small', { textContent: [...new Set(more.map((o) => (CHOICE_SHORT[o.id] ?? o.id)))].join(' · ') })]),
       ]);
       change.addEventListener('click', () => {
@@ -1550,7 +1551,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   function choiceTile(opt, onPick) {
     const look = CHOICE_LOOK[opt.id] ?? { icon: '•', hint: '' };
     const b = el('button', { type: 'button', className: `play-choice ${opt.id}` }, [
-      el('span', { className: 'choice-icon', textContent: look.icon }),
+      icona(look.icon, 'choice-icon'),
       el('span', { className: 'choice-text' }, [el('b', { textContent: opt.label }), look.hint ? el('small', { textContent: look.hint }) : null]),
     ]);
     b.dataset.choice = opt.id;
@@ -1766,7 +1767,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           el('h2', { textContent: 'Què sé fer' }),
           el('p', { className: 'play-note', textContent: 'Un nivell compta com a assolit quan hi tens algun pas a «Ja ho tens!». Això és el que ja pots portar al grup.' }),
         ]),
-        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost'), button('🖨 Imprimeix', () => window.print(), 'ghost small')]),
+        el('div', { className: 'play-resume' }, [button('← Al full de ruta', () => { screen = 'ruta'; showMap(); }, 'ghost'), button('Imprimeix', () => window.print(), 'ghost small')]),
       ]),
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'A la banda ja pots…' }),
@@ -1822,7 +1823,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       if (!code) return say(errorText(new Error('sense-codi')), true);
       busy = true;
       row.classList.add('busy');
-      say(`📥 Obrint «${entry.titol || entry.nom}»…`);
+      say(`Obrint «${entry.titol || entry.nom}»…`);
       try {
         const song = await loadLibrarySong(code, entry.id);
         const spec = specFromLibrary(song, entry);
@@ -1891,10 +1892,10 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     };
     filter.addEventListener('input', render);
     const box = el('div', { className: 'play-world play-library' }, [
-      el('h3', { textContent: '📚 Biblioteca compartida' }),
+      el('h3', { textContent: 'Biblioteca compartida' }),
       el('p', { className: 'play-note', innerHTML: 'Les cançons que el professorat comparteix des del <a href="https://rockin-cat.github.io/Generador-diagrames/" target="_blank" rel="noopener">Generador de diagrames</a>: aquí s\'obren com un camí, amb els seus acords, l\'estructura, l\'estil i el tempo. Cal el codi del professorat.' }),
       el('div', { className: 'play-buttons left' }, [
-        button(libraryList ? '↻ Actualitza la llista' : '📚 Obre la biblioteca', () => fetchList(true), libraryList ? 'ghost small' : 'primary'),
+        button(libraryList ? '↻ Actualitza la llista' : 'Obre la biblioteca', () => fetchList(true), libraryList ? 'ghost small' : 'primary'),
         button('Canvia el codi', () => fetchList('code'), 'ghost small'),
       ]),
       status,
@@ -1952,7 +1953,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const bookCards = bookSpecs.map((spec) => {
       const progress = progressIn(spec);
       const card = el('button', { type: 'button', className: 'play-song book' }, [
-        el('span', { className: 'play-song-icon', textContent: '📖' }),
+        icona('📖', 'play-song-icon'),
         el('strong', { textContent: spec.name }),
         el('small', { className: 'play-song-artist', textContent: spec.artist }),
         el('div', { className: 'play-goal-chords' }, splitProgression(spec.progression).map((c) => chordChip(c, spec.key))),
@@ -1973,7 +1974,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       });
       const card = el('div', { className: `play-song${spec.library ? ' library' : ''}`, role: 'button', tabIndex: 0 }, [
         remove,
-        el('span', { className: 'play-song-icon', textContent: spec.library ? '📚' : '♬' }),
+        icona(spec.library ? '📚' : '♬', 'play-song-icon'),
         el('strong', { textContent: spec.name || spec.progression }),
         spec.artist ? el('small', { className: 'play-song-artist', textContent: spec.artist }) : null,
         el('div', { className: 'play-goal-chords' }, spec.progression.split('|').map((c) => chordChip(c.trim(), spec.key ?? keyOf(spec)))),
@@ -2005,7 +2006,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       ]),
       libraryBox(),
       el('div', { className: 'play-world' }, [
-        el('h3', { textContent: '📖 Cançons del llibre ROCKIN' }),
+        el('h3', { textContent: 'Cançons del llibre ROCKIN' }),
         el('p', { className: 'play-note', textContent: 'Amb la graella de cada cançó i els acords pintats pel seu grau, com al llibre.' }),
         el('div', { className: 'play-songs' }, bookCards),
       ]),
@@ -2073,7 +2074,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const st = me();
     const slides = [
       {
-        art: el('img', { className: 'welcome-logo', src: 'assets/brand/rockin-logo-dark.png', alt: 'ROCKIN' }),
+        art: el('img', { className: 'welcome-logo', src: 'assets/brand/rockin-logo.png', alt: 'ROCKIN' }),
         title: `Hola, ${st?.name ?? ''}!`,
         text: 'Aquí aprendràs a <b>acompanyar cançons</b> amb el teclat, per a tocar amb el teu grup de música.',
       },
@@ -2088,7 +2089,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         text: 'Les tecles <b>grogues</b> són les que has de tocar. Pots fer servir un teclat de veritat o el ratolí. Sense teclat? Activa <b>«Tocar amb l\'ordinador»</b> a dalt de tot.',
       },
       {
-        art: el('div', { className: 'welcome-art', textContent: '✋ 👂' }),
+        art: Object.assign(document.createElement('div'), { className: 'welcome-art', innerHTML: iconaHtml('ma') + iconaHtml('escolta') }),
         title: 'Primer escoltes, després toques',
         text: 'Quan veus la <b>mà</b>, escolta i no toquis. Quan surt <b>«Ara tu!»</b>, compta i entra.',
       },
@@ -2114,7 +2115,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       path = handsPath(ROCKIN_PATH);
       setChildren(mapScreen,
         el('div', { className: 'play-world play-welcome' }, [
-          el('div', { className: 'welcome-art', textContent: '🎯' }),
+          icona('diana', 'welcome-art', 'div'),
           el('h2', { textContent: 'Per on comences?' }),
           el('p', { innerHTML: 'Si és el primer cop que toques acords, comença pel principi. Si ja en saps una mica, fes la <b>prova de nivell</b>: 4 proves curtes i el joc et porta al lloc que et toca.' }),
           el('div', { className: 'play-buttons' }, [
@@ -2125,7 +2126,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
               }
               openMission(0);
             }, 'ghost'),
-            button('🎯 Fes la prova de nivell', () => placementTest()),
+            button('Fes la prova de nivell', () => placementTest()),
           ]),
         ]),
       );
@@ -2226,8 +2227,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     setChildren(mapScreen,
       el('div', { className: 'play-teacher-top' }, [
         button('← Torna al joc', back, 'ghost'),
-        el('h2', { textContent: '⚙ Zona del professorat' }),
-        button('📘 Guia del professorat', () => {
+        el('h2', { textContent: 'Zona del professorat' }),
+        button('Guia del professorat', () => {
           guideBack = 'teacher';
           screen = 'guide';
           showMap();
@@ -2236,12 +2237,12 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'Prova-ho tot' }),
         el('p', { className: 'play-note', textContent: 'Entra com a professor/a: totes les missions obertes (camí, taller i cançons) i no es guarda cap resultat ni cap intent.' }),
-        el('div', { className: 'play-buttons' }, [button('🔓 Entra en mode professor', enterTeacherMode)]),
+        el('div', { className: 'play-buttons' }, [button('Entra en mode professor', enterTeacherMode)]),
       ]),
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'Fitxa per imprimir' }),
         el('p', { className: 'play-note', textContent: 'La fitxa del camí ROCKIN. La de cada cançó és al mapa de la cançó (portada → Cançons).' }),
-        el('div', { className: 'play-buttons' }, [button('🖨 Fitxa del camí ROCKIN (1 pàgina horitzontal)', () => printSheet(), 'ghost')]),
+        el('div', { className: 'play-buttons' }, [button('Fitxa del camí ROCKIN (1 pàgina horitzontal)', () => printSheet(), 'ghost')]),
       ]),
       el('div', { className: 'play-world' }, [
         el('h3', { textContent: 'Opcions del joc' }),
@@ -2372,7 +2373,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       ]);
     });
     return el('div', { className: 'play-world' }, [
-      el('h3', { textContent: '🧭 Camí intel·ligent: què sap cada alumne' }),
+      el('h3', { textContent: 'Camí intel·ligent: què sap cada alumne' }),
       el('p', { className: 'play-note', textContent: '«Sap» compta els aprenentatges demostrats o deduïts (notes, llegir cartes, cada acord, cada canvi, la roda a tempo, els ritmes, la banda…).' }),
       ...blocks,
     ]);
@@ -2632,7 +2633,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   // start and get in the way later: from band level 3 on (playing from memory)
   // the keyboard only appears when the mission paints keys, and from level 4 a
   // row where every bar uses the same card shows one card ("una per acord").
-  // `keysManual` (the 🎹 button) overrides it for the session.
+  // `keysManual` (the button) overrides it for the session.
   let keysManual = null;
   const bandStep = () => (isTeacher() ? 0 : me()?.band ?? 0);
   /**
@@ -2656,7 +2657,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   };
   const keysWanted = (helpMode) => {
     if (mission?.rehearsal) return false;
-    // Lit keys need the keyboard, even if it was hidden with the 🎹 button.
+    // Lit keys need the keyboard, even if it was hidden with the button.
     if (helpMode === 'shape') return true;
     if (keysManual !== null) return keysManual;
     // With a MIDI keyboard and nothing to paint, the screen keyboard only distracts.
@@ -2671,7 +2672,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     missionScreen.classList.toggle('no-keys', !on);
   };
   let hudRefresh = () => {};
-  const keysButton = () => button(piano.hidden ? '🎹 Mostra el teclat' : '🎹 Amaga el teclat', () => {
+  const keysButton = () => button(piano.hidden ? 'Mostra el teclat' : 'Amaga el teclat', () => {
     keysManual = piano.hidden;
     showKeyboard(piano.hidden);
     hudRefresh();
@@ -2715,7 +2716,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       ]),
       hudTools(
         mission.index > 0 ? button('↩ Anterior', () => openMission(mission.index - 1), 'ghost small') : null,
-        mission.index >= 0 && path.missions[mission.index + 1] ? button('⏭ Salta', () => openMission(mission.index + 1), 'ghost small') : null,
+        mission.index >= 0 && path.missions[mission.index + 1] ? button('Salta', () => openMission(mission.index + 1), 'ghost small') : null,
         keysButton(),
         grooveButton(),
       ),
@@ -2773,7 +2774,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const keys = level === 2
       ? ' <i>Ara el teclat de la pantalla es fa més petit: mira més les cartes.</i>'
       : level === 3
-        ? ' <i>A partir d\'ara el teclat de la pantalla s\'amaga quan no et pinta tecles (amb 🎹 el pots recuperar).</i>'
+        ? ' <i>A partir d\'ara el teclat de la pantalla s\'amaga quan no et pinta tecles (amb el pots recuperar).</i>'
         : '';
     return `<b>Nou a «Què sé fer»:</b> ${BAND_LEVELS[level].can}${keys}`;
   }
@@ -2963,7 +2964,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
 
     const todo = [...tips, ...notes.filter(Boolean)];
     if (learnt) todo.push(`<span class="play-learnt">${learnt}</span>`);
-    if (band) todo.push(`<span class="play-band-up">🎸 ${band}</span>`);
+    if (band) todo.push(`<span class="play-band-up">${band}</span>`);
 
     let buttons = [];
     let advice = null;
@@ -3180,7 +3181,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       // The same panel whether it sounds or not (only the kicker and the buttons
       // change), so nothing moves or gets cut while the card plays.
       const panel = (playing = false) => {
-        setPanel({ kicker: playing ? `${kicker} · 🔊 sona la carta: mira la pilota` : kicker, title: slide.title, text: slide.text, tone: playing ? 'listen' : '', buttons: buttons(playing) });
+        setPanel({ kicker: playing ? `${kicker} · sona la carta: mira la pilota` : kicker, title: slide.title, text: slide.text, tone: playing ? 'listen' : '', buttons: buttons(playing) });
         step = playing ? { space: next, escape: () => { stopSession(); panel(); } } : { space: next, escape: next };
       };
       const listen = () => {
@@ -3853,7 +3854,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     const card = (song) => {
       const memory = jamMemory(song);
       const b = el('button', { type: 'button', className: `play-song${song.book ? ' book' : ''} jam` }, [
-        el('span', { className: 'play-song-icon', textContent: song.key === 'rockin' ? '🎸' : song.book ? '📖' : '♬' }),
+        icona(song.key === 'rockin' ? '🎸' : song.book ? '📖' : '♬', 'play-song-icon'),
         el('strong', { textContent: song.name }),
         song.sub ? el('small', { className: 'play-song-artist', textContent: song.sub }) : null,
         el('div', { className: 'play-goal-chords' }, song.wheel.map((c) => chordChip(c, song.chordKey))),
@@ -4412,8 +4413,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     // "If you get it right you go up a level": say it out loud.
     const levelAfter = levelOf(state, skills, nextStep(structuredClone(state), skills).stage);
     if (levelAfter.n > levelBefore.n) parts.push(`Ara treballes l'etapa ${levelAfter.n} de ${levelAfter.total}: ${levelAfter.name}.`);
-    if (after > before) parts.push(`🧭 +${after - before} ${after - before === 1 ? 'aprenentatge' : 'aprenentatges'}: ja en saps ${after} de ${skills.length}.`);
-    else parts.push(`🧭 Saps ${after} de ${skills.length} aprenentatges.`);
+    if (after > before) parts.push(`+${after - before} ${after - before === 1 ? 'aprenentatge' : 'aprenentatges'}: ja en saps ${after} de ${skills.length}.`);
+    else parts.push(`Saps ${after} de ${skills.length} aprenentatges.`);
     if (nowWeak.length) parts.push(`Cal practicar: ${nowWeak.map((x) => x.label).join(', ')}.`);
     return parts.join(' ');
   }
@@ -4443,8 +4444,8 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       // You are never stuck in the loop: you can always go easier or jump ahead.
       hudTools(
         button('↩ Més fàcil', () => adaptiveJump(-1), 'ghost small'),
-        button('⏭ Salta', () => adaptiveJump(1), 'ghost small'),
-        button('🧭 El meu camí', () => {
+        button('Salta', () => adaptiveJump(1), 'ghost small'),
+        button('El meu camí', () => {
           screen = 'map';
           showMap();
         }, 'ghost small'),
@@ -4574,7 +4575,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         type: 'button',
         className: `play-skill ${cls}${inNext(x) ? ' next' : ''}`,
         title: { unknown: 'Encara no ho has provat', weak: 'Encara et costa', inferred: 'Ho saps (ho has demostrat en un repte més difícil)', ok: 'Ho saps' }[cls],
-      }, [el('span', { textContent: x.icon }), ` ${x.label}`]);
+      }, [icona(x.icon), ` ${x.label}`]);
       b.addEventListener('click', () => openAdaptive(kit, { stage: x.stage, skill: x.id, mode: known(state, x.id) ? 'practise' : 'probe', reason: '' }));
       return b;
     };
@@ -4616,7 +4617,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         el('p', { className: 'play-note', textContent: 'Pots tocar qualsevol aprenentatge per practicar-lo quan vulguis.' }),
       ]),
       el('div', { className: 'play-map-foot' }, [
-        button('❓ Com es juga?', () => {
+        button('Com es juga?', () => {
           screen = 'welcome';
           showMap();
         }, 'ghost small'),
@@ -4631,7 +4632,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           showMap();
         }, 'ghost small'),
         section === 'cancons' ? unlockButton() : null,
-        section === 'cancons' ? null : button('⚙ Professorat', () => {
+        section === 'cancons' ? null : button('Professorat', () => {
           screen = 'teacher';
           showMap();
         }, 'ghost small'),
@@ -4699,7 +4700,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
             retried.add(k);
             TESTS_GO[k]();
           }) : null,
-          button('⏭ Continua la prova', () => (k + 1 < TESTS.length ? TESTS_GO[k + 1]() : placeFromOutcomes()), canRetry ? 'ghost' : 'primary'),
+          button('Continua la prova', () => (k + 1 < TESTS.length ? TESTS_GO[k + 1]() : placeFromOutcomes()), canRetry ? 'ghost' : 'primary'),
           button(`▶ Comença aquí: ${ROCKIN_PATH.missions[Math.max(0, indexOf(PLACE_AT[k]))]?.world?.title ?? ''}`, () => placeFromOutcomes(), 'ghost'),
         ],
       });
@@ -4715,7 +4716,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         // Never stuck: skip a test, or stop here and start playing at this level.
         hudTools(
           k > 0 ? button('↩ Prova anterior', () => TESTS_GO[k - 1](), 'ghost small') : null,
-          button('⏭ Salta la prova', () => {
+          button('Salta la prova', () => {
             outcome[k] = undefined;
             if (k + 1 < TESTS.length) TESTS_GO[k + 1]();
             else placeFromOutcomes();
@@ -5314,7 +5315,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     };
     const start = () => {
       started = performance.now();
-      clockText = () => `⏱ ${left()} s · ${built} ${built === 1 ? 'acord' : 'acords'}`;
+      clockText = () => `${left()} s · ${built} ${built === 1 ? 'acord' : 'acords'}`;
       timer = setInterval(() => {
         if (mission !== own) {
           clearInterval(timer);
@@ -5521,7 +5522,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       startPanel({
         kicker: TYPE_LABEL[type],
         title: mission.title,
-        text: brief ? what : `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}${mission.voice ? `<br>🎤 ${VOICE_TEXT[mission.voice]}` : ''}${mission.soundOf ? `<br>🎛 Sons: ${Object.entries(mission.soundOf).map(([part, snd]) => `${part === '*' ? 'tota la cançó' : part} → <b>${SOUNDS.find((x) => x.id === snd)?.name ?? snd}</b>`).join(' · ')}` : ''}`,
+        text: brief ? what : `${type === 'pattern' || type === 'mix' ? '' : `${context}<br>`}${what}${mission.voice ? `<br>${VOICE_TEXT[mission.voice]}` : ''}${mission.soundOf ? `<br>Sons: ${Object.entries(mission.soundOf).map(([part, snd]) => `${part === '*' ? 'tota la cançó' : part} → <b>${SOUNDS.find((x) => x.id === snd)?.name ?? snd}</b>`).join(' · ')}` : ''}`,
         list: brief ? [] : cardLegend(cards),
         note: [
           note,
@@ -6291,7 +6292,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       });
       return b;
     });
-    const save = button('✨ Improvisa sobre aquesta roda', () => {
+    const save = button('Improvisa sobre aquesta roda', () => {
       const wheel = refresh();
       if (!wheel || !wheel.length) {
         error.textContent = error.textContent || 'Escriu almenys un acord.';
@@ -6304,7 +6305,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     });
     refresh();
     return el('div', { className: 'play-improv-custom' }, [
-      el('h3', { textContent: '✏️ Inventa la teva roda' }),
+      el('h3', { textContent: 'Inventa la teva roda' }),
       el('p', { className: 'play-note', textContent: 'Escriu els acords en l\'ordre que vulguis (Do, La m, Sib… o C, Am, Bb…) o afegeix-los amb els botons. Un compàs per acord.' }),
       input,
       el('div', { className: 'play-chip-row' }, [
@@ -6357,7 +6358,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     }));
     const songCard = (s) => {
       const b = el('button', { type: 'button', className: `play-song${s.book ? ' book' : ''}${s.key === song.key ? ' on' : ''}` }, [
-        el('span', { className: 'play-song-icon', textContent: s.own ? '✏️' : s.key === 'rockin' ? '🎸' : s.book ? '📖' : '♬' }),
+        icona(s.own ? '✏️' : s.key === 'rockin' ? '🎸' : s.book ? '📖' : '♬', 'play-song-icon'),
         el('strong', { textContent: s.name }),
         s.sub ? el('small', { className: 'play-song-artist', textContent: s.sub }) : null,
         el('div', { className: 'play-goal-chords' }, s.wheel.map((c) => chordChip(c, s.chordKey))),
@@ -6471,7 +6472,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           el('div', { className: 'play-goal-chords' }, wheel.map((c) => chordChip(c, key, c === text ? 'now' : 'on'))),
         ]),
         hudTools(
-          button('🧭 Improvisa', () => {
+          button('Improvisa', () => {
             stopSession();
             screen = 'improv';
             showMap();
@@ -6515,7 +6516,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
         list: lines,
         buttons: [
           button('↻ Una altra', () => startImprov(song)),
-          button('🧭 Improvisa', () => {
+          button('Improvisa', () => {
             screen = 'improv';
             showMap();
           }, 'ghost'),
@@ -6534,7 +6535,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       own.phase = '';
     };
     const buttons = () => [
-      mode === 'reptes' ? button('🎲 Un altre repte', nextOne, 'ghost') : null,
+      mode === 'reptes' ? button('Un altre repte', nextOne, 'ghost') : null,
       button('Prou, ja he acabat', finish, 'ghost'),
     ].filter(Boolean);
     const own = {
