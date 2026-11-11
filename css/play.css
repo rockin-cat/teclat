@@ -1,29 +1,22 @@
-/* "Juga": the guided game. A dark, colourful look of its own. */
+/* "Juga": the guided game. A colourful look of its own on a light background. */
 
 body.play-theme {
-  --play-bg: #120d2e;
-  --play-bg-2: #231a55;
-  --play-panel: rgb(255 255 255 / 7%);
-  --play-line: rgb(255 255 255 / 14%);
-  --play-ink: #f5f3ff;
-  --play-muted: #b7b0dc;
+  --play-bg: #f6f3ec;
+  --play-bg-2: #ffffff;
+  --play-panel: #ffffff;
+  --play-line: #e3ded4;
+  --play-ink: #1f1e1c;
+  --play-muted: #6b675f;
   --play-yellow: #ffc012;
-  --play-cyan: #36c5f0;
-  --play-pink: #ff5c8a;
-  --play-green: #3ddc84;
-  --play-red: #ff6b6b;
-  background: radial-gradient(1200px 700px at 20% -10%, var(--play-bg-2), transparent 60%),
-    radial-gradient(900px 600px at 110% 10%, #3a1650, transparent 60%), var(--play-bg);
-  background-attachment: fixed;
+  --play-yellow-ink: #a87400;
+  --play-cyan: #1a9fd0;
+  --play-pink: #e8457a;
+  --play-green: #1f9d55;
+  --play-red: #d64545;
+  background: var(--play-bg);
   color: var(--play-ink);
 }
 
-body.play-theme .topbar {
-  color: var(--play-ink);
-  background: rgb(10 7 30 / 70%);
-  border-bottom-color: var(--play-line);
-  backdrop-filter: blur(6px);
-}
 
 body.play-theme h1 span,
 body.play-theme .status,
@@ -32,7 +25,7 @@ body.play-theme .toggle {
 }
 
 body.play-theme .views {
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
 }
 
 body.play-theme button.view-tab {
@@ -45,7 +38,7 @@ body.play-theme button.view-tab {
 
 .play-view kbd {
   color: var(--play-ink);
-  background: rgb(255 255 255 / 12%);
+  background: rgb(31 30 28 / 10%);
   border-color: var(--play-line);
 }
 
@@ -77,12 +70,12 @@ button.play-btn.primary:active {
 
 button.play-btn.ghost {
   color: var(--play-ink);
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
   box-shadow: inset 0 0 0 2px var(--play-line);
 }
 
 button.play-btn.ghost:hover {
-  background: rgb(255 255 255 / 14%);
+  background: rgb(31 30 28 / 11%);
 }
 
 button.play-btn.small {
@@ -95,7 +88,7 @@ button.play-btn.small {
   font-size: 14px;
   font-weight: 700;
   color: var(--play-ink);
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
   border: 2px solid var(--play-line);
   border-radius: 999px;
 }
@@ -159,7 +152,7 @@ button.play-btn.small {
 }
 
 .play-total span {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-resume {
@@ -241,7 +234,7 @@ button.play-btn.small {
 
 .play-world-stars {
   font-weight: 800;
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-goal-chords {
@@ -257,7 +250,7 @@ button.play-btn.small {
   font-weight: 800;
   text-align: center;
   color: var(--play-muted);
-  background: rgb(255 255 255 / 5%);
+  background: rgb(31 30 28 / 4%);
   border: 2px dashed var(--play-line);
   border-radius: 10px;
 }
@@ -397,7 +390,7 @@ button.play-node:disabled {
   min-height: 1em;
   font-size: 15px;
   letter-spacing: 2px;
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-map > .play-toggle {
@@ -469,7 +462,7 @@ button.play-node:disabled {
   font-size: 14px;
   font-weight: 900;
   color: var(--play-muted);
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 2px solid var(--play-line);
   border-radius: 50%;
 }
@@ -483,14 +476,14 @@ button.play-node:disabled {
 .play-hud-steps li.now {
   color: #1d1d1f;
   background: var(--play-yellow);
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
   transform: scale(1.15);
 }
 
 .play-stars {
   font-size: 26px;
   letter-spacing: 3px;
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
   white-space: nowrap;
 }
 
@@ -557,7 +550,7 @@ button.play-node:disabled {
 }
 
 .play-panel b {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-note {
@@ -623,12 +616,12 @@ button.play-node:disabled {
 }
 
 .play-result-stars span {
-  color: rgb(255 255 255 / 15%);
+  color: rgb(31 30 28 / 12%);
   animation: star-in 0.4s ease-out both;
 }
 
 .play-result-stars span.on {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
   text-shadow: 0 0 18px rgb(255 192 18 / 60%);
 }
 
@@ -649,7 +642,7 @@ button.play-node:disabled {
 .play-dots span {
   width: 26px;
   height: 26px;
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 3px solid var(--play-line);
   border-radius: 50%;
 }
@@ -666,7 +659,7 @@ button.play-node:disabled {
 }
 
 .play-dots span.now {
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
   box-shadow: 0 0 0 3px rgb(255 192 18 / 35%);
 }
 
@@ -738,7 +731,7 @@ button.play-tab {
 button.play-tab.on {
   color: #1d1d1f;
   background: var(--play-yellow);
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
 }
 
 button.play-tab.add {
@@ -777,7 +770,7 @@ button.play-tab.add.on {
   font: inherit;
   font-weight: 400;
   color: var(--play-ink);
-  background: rgb(0 0 0 / 30%);
+  background: #fff;
   border: 1px solid var(--play-line);
   border-radius: 8px;
 }
@@ -853,7 +846,7 @@ button.play-tab.add.on {
 }
 
 .play-panel.status.ready {
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
   background: linear-gradient(90deg, rgb(255 192 18 / 25%), var(--play-panel));
 }
 
@@ -1003,7 +996,7 @@ button.play-tab.add.on {
   background: #f4f1ea;
   border: 3px solid transparent;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
 }
 
 .score-card img {
@@ -1145,7 +1138,7 @@ button.play-tab.add.on {
 }
 
 .score-tile.ready .score-head b {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 /* ---- Students, map bar ----------------------------------------------------------------------------- */
@@ -1198,7 +1191,7 @@ button.play-tab.add.on {
   padding: 10px 12px;
   font: inherit;
   color: var(--play-ink);
-  background: rgb(0 0 0 / 30%);
+  background: #fff;
   border: 1px solid var(--play-line);
   border-radius: 10px;
 }
@@ -1256,7 +1249,7 @@ button.play-tab.add.on {
   width: 28px;
   height: 10px;
   overflow: hidden;
-  background: rgb(255 255 255 / 10%);
+  background: rgb(31 30 28 / 8%);
   border-radius: 5px;
 }
 
@@ -1648,7 +1641,7 @@ details.play-world.locked > summary {
 }
 
 details.play-world.locked .play-world-number {
-  background: rgb(255 255 255 / 12%);
+  background: rgb(31 30 28 / 10%);
   box-shadow: none;
 }
 
@@ -1699,7 +1692,7 @@ details.play-world.locked .play-world-number {
   flex: 1;
   min-width: 8px;
   height: 8px;
-  background: rgb(255 255 255 / 12%);
+  background: rgb(31 30 28 / 10%);
   border-radius: 4px;
 }
 
@@ -1732,7 +1725,7 @@ details.play-world.locked .play-world-number {
 }
 
 .play-welcome b {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-welcome .play-dots,
@@ -1750,7 +1743,7 @@ details.play-world.locked .play-world-number {
 }
 
 .welcome-art.stars {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
   letter-spacing: 8px;
   text-shadow: 0 0 20px rgb(255 192 18 / 50%);
 }
@@ -1873,7 +1866,7 @@ button.play-board-tab {
 button.play-board-tab.on {
   color: #1d1d1f;
   background: var(--play-yellow);
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
   box-shadow: 0 4px 0 #c48d00;
 }
 
@@ -1886,7 +1879,7 @@ button.play-board-tab.on {
   gap: 2px;
   min-width: min(100%, 360px);
   padding: 14px 22px;
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 3px solid var(--play-yellow);
   border-radius: 20px;
 }
@@ -1901,7 +1894,7 @@ button.play-board-tab.on {
   font-size: clamp(38px, 6vw, 60px);
   font-weight: 900;
   line-height: 1.05;
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-target span {
@@ -1925,7 +1918,7 @@ button.play-board-tab.on {
 
 /* Keys still down from the chord before: a warning, never a mistake. */
 .play-target.hold {
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
 }
 
 /* The chord that comes now, announced before you play it. */
@@ -1964,7 +1957,7 @@ button.play-board-tab.on {
   align-items: flex-start;
   gap: 8px;
   padding: 16px;
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 2px solid var(--play-line);
   border-radius: 16px;
   cursor: pointer;
@@ -1972,7 +1965,7 @@ button.play-board-tab.on {
 
 .play-song:hover,
 .play-song:focus-visible {
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
 }
 
 .play-song strong {
@@ -2021,7 +2014,7 @@ button.play-song-quick {
   padding: 12px 14px;
   text-align: left;
   color: var(--play-ink);
-  background: rgb(255 255 255 / 4%);
+  background: rgb(31 30 28 / 4%);
   border: 1px dashed var(--play-line);
   border-radius: 12px;
   cursor: pointer;
@@ -2079,7 +2072,7 @@ button.play-song-quick span {
   max-width: 320px;
   height: 12px;
   overflow: hidden;
-  background: rgb(255 255 255 / 12%);
+  background: rgb(31 30 28 / 10%);
   border-radius: 6px;
 }
 
@@ -2142,7 +2135,7 @@ button.play-song-quick span {
   font-size: 14px;
   font-weight: 700;
   color: var(--play-ink);
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 2px solid var(--play-line);
   border-radius: 999px;
   cursor: pointer;
@@ -2277,7 +2270,7 @@ button.play-song-quick span {
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  background: rgb(255 255 255 / 5%);
+  background: rgb(31 30 28 / 4%);
   border-radius: 12px;
 }
 
@@ -2556,7 +2549,7 @@ button.play-hands-option {
   font: inherit;
   color: var(--play-ink);
   text-align: center;
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 2px solid var(--play-line);
   border-radius: 18px;
   cursor: pointer;
@@ -2564,7 +2557,7 @@ button.play-hands-option {
 
 button.play-hands-option:hover,
 button.play-hands-option.on {
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
   box-shadow: 0 0 0 3px rgb(255 192 18 / 30%);
 }
 
@@ -2589,14 +2582,14 @@ button.play-hands-chip {
   font: inherit;
   font-size: 14px;
   color: var(--play-ink);
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
   border: 1px solid var(--play-line);
   border-radius: 999px;
   cursor: pointer;
 }
 
 button.play-hands-chip b {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 @media (max-width: 640px) {
@@ -2630,7 +2623,7 @@ button.play-hands-chip b {
 
 .guide-body h4 {
   margin: 14px 0 4px;
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .guide-body ul,
@@ -2652,7 +2645,7 @@ button.play-hands-chip b {
 .guide-body code,
 .guide-body kbd {
   padding: 1px 5px;
-  background: rgb(255 255 255 / 10%);
+  background: rgb(31 30 28 / 8%);
   border-radius: 4px;
 }
 
@@ -2741,7 +2734,7 @@ button.play-hands-chip b {
   padding: 6px 14px;
   font-size: 20px;
   font-weight: 900;
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
   border: 2px solid var(--play-line);
   border-radius: 12px;
 }
@@ -2755,7 +2748,7 @@ button.play-hands-chip b {
 .arp-steps span.now {
   color: #1d1d1f;
   background: var(--play-yellow);
-  border-color: var(--play-yellow);
+  border-color: var(--play-yellow-ink);
 }
 
 .legend.line {
@@ -3141,10 +3134,10 @@ button.play-hands-chip b {
   max-height: 70vh;
   overflow-y: auto;
   padding: 14px 16px;
-  background: #1c1735;
+  background: var(--play-panel);
   border: 1px solid var(--play-line);
   border-radius: 16px;
-  box-shadow: 0 16px 40px rgb(0 0 0 / 55%);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 14%);
 }
 
 .play-level-ladder p b {
@@ -3285,8 +3278,8 @@ button.play-hands-chip b {
   font: inherit;
   font-size: 14px;
   color: var(--play-ink);
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 18%);
+  background: rgb(31 30 28 / 5%);
+  border: 1px solid rgb(31 30 28 / 14%);
   border-radius: 10px;
 }
 
@@ -3302,8 +3295,8 @@ button.play-hands-chip b {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(31 30 28 / 4%);
+  border: 1px solid rgb(31 30 28 / 8%);
   border-radius: 12px;
 }
 
@@ -3339,7 +3332,7 @@ button.play-hands-chip b {
 }
 
 .play-library a {
-  color: var(--play-yellow);
+  color: var(--play-yellow-ink);
 }
 
 .play-song.library .play-song-icon {
@@ -3357,7 +3350,7 @@ button.play-hands-chip b {
 .play-keyboard-own {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid rgb(255 255 255 / 10%);
+  border-top: 1px solid rgb(31 30 28 / 8%);
 }
 
 .play-keyboard-own h4 {
@@ -3567,14 +3560,14 @@ button.play-hands-chip b {
   font-size: 15px;
   color: var(--play-ink);
   text-align: left;
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 12%);
+  background: rgb(31 30 28 / 4%);
+  border: 1px solid rgb(31 30 28 / 10%);
   border-radius: 10px;
   cursor: pointer;
 }
 
 .route-step:hover {
-  background: rgb(255 255 255 / 10%);
+  background: rgb(31 30 28 / 8%);
 }
 
 .route-step.lvl-ok {
@@ -3587,7 +3580,7 @@ button.play-hands-chip b {
   font-size: 12px;
   font-weight: 800;
   color: #1d1d1f;
-  background: rgb(255 255 255 / 25%);
+  background: rgb(31 30 28 / 20%);
   border-radius: 999px;
 }
 
@@ -3694,8 +3687,8 @@ button.play-hands-chip b {
   letter-spacing: 0.2em;
   color: var(--play-ink);
   text-align: center;
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 18%);
+  background: rgb(31 30 28 / 5%);
+  border: 1px solid rgb(31 30 28 / 14%);
   border-radius: 10px;
 }
 
@@ -3725,7 +3718,7 @@ button.play-hands-chip b {
   gap: 8px;
   padding: 3px 0;
   font-size: 14px;
-  border-bottom: 1px dashed rgb(255 255 255 / 10%);
+  border-bottom: 1px dashed rgb(31 30 28 / 8%);
 }
 
 .play-song.on {
@@ -3733,7 +3726,7 @@ button.play-hands-chip b {
 }
 
 .home-door.classic .door-icon {
-  background: rgb(255 255 255 / 10%);
+  background: rgb(31 30 28 / 8%);
 }
 
 /* ---- The poster itself (Piano · Teclat · Full de ruta · Nivells) ------------------------------- */
@@ -3744,11 +3737,11 @@ button.play-hands-chip b {
   flex-direction: column;
   gap: 14px;
   padding: 22px 22px 16px;
-  color: #fff;
-  background: radial-gradient(120% 70% at 50% 0%, #1b2a40 0%, #0b1526 62%);
+  color: var(--play-ink);
+  background: radial-gradient(120% 70% at 50% 0%, #ffffff 0%, var(--play-bg) 62%);
   border: 8px solid var(--c);
   border-radius: 8px;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 40%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 14%);
 }
 
 .poster-head {
@@ -3838,8 +3831,8 @@ button.play-hands-chip b {
   font-weight: 700;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  background: rgb(0 0 0 / 35%);
-  border: 1px solid rgb(255 255 255 / 25%);
+  background: rgb(0 0 0 / 5%);
+  border: 1px solid rgb(31 30 28 / 20%);
   border-radius: 6px;
 }
 
@@ -3850,11 +3843,11 @@ button.play-hands-chip b {
   justify-content: center;
   gap: 6px 10px;
   font-size: 14px;
-  color: #c9d2de;
+  color: var(--play-muted);
 }
 
 .poster-song b {
-  color: #fff;
+  color: var(--play-ink);
 }
 
 .poster-song-chords {
@@ -3876,9 +3869,9 @@ button.play-hands-chip b {
   min-height: 150px;
   padding: 14px;
   font: inherit;
-  color: #fff;
+  color: var(--play-ink);
   text-align: left;
-  background: #141f33;
+  background: var(--play-panel);
   border: 2px solid #2a3850;
   border-radius: 14px;
   cursor: pointer;
@@ -3933,7 +3926,7 @@ button.play-hands-chip b {
 .ptile small {
   font-size: 13px;
   line-height: 1.3;
-  color: #d6dbe3;
+  color: var(--play-muted);
 }
 
 .ptile-foot {
@@ -3951,7 +3944,7 @@ button.play-hands-chip b {
 .ptile-foot em {
   font-size: 12px;
   font-style: normal;
-  color: #9aa4b2;
+  color: #8a857c;
   white-space: nowrap;
 }
 
@@ -3975,7 +3968,7 @@ button.play-hands-chip b {
   justify-content: space-between;
   gap: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgb(255 255 255 / 12%);
+  border-top: 1px solid rgb(31 30 28 / 10%);
 }
 
 .poster-logo {
@@ -3994,7 +3987,7 @@ button.play-hands-chip b {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: #141f33;
+  background: var(--play-panel);
   border: 2px solid var(--c);
   border-radius: 14px;
 }
@@ -4023,12 +4016,12 @@ button.play-hands-chip b {
 }
 
 .poster-level-head small {
-  color: #c9d2de;
+  color: var(--play-muted);
 }
 
 .poster .route-step {
-  color: #fff;
-  background: rgb(255 255 255 / 5%);
+  color: var(--play-ink);
+  background: rgb(31 30 28 / 4%);
 }
 
 .route-step-text {
@@ -4039,15 +4032,15 @@ button.play-hands-chip b {
 
 .route-step-text small {
   font-size: 12.5px;
-  color: #9aa4b2;
+  color: #8a857c;
 }
 
 .poster .route-band {
-  color: #c9d2de;
+  color: var(--play-muted);
 }
 
 .poster .route-band.on {
-  color: #fff;
+  color: var(--play-ink);
 }
 
 .route-hint {
@@ -4301,8 +4294,8 @@ body.play-theme .level-badge.l2 {
   min-height: 118px;
   padding: 14px 14px 12px;
   font-weight: 600;
-  background: rgb(255 255 255 / 4%);
-  border: 2px solid rgb(255 255 255 / 14%);
+  background: rgb(31 30 28 / 4%);
+  border: 2px solid rgb(31 30 28 / 11%);
   border-radius: 16px;
   transition: border-color 0.15s, transform 0.15s, background 0.15s;
 }
@@ -4321,7 +4314,7 @@ body.play-theme .level-badge.l2 {
   height: 40px;
   font-size: 22px;
   line-height: 1;
-  background: rgb(255 255 255 / 8%);
+  background: rgb(31 30 28 / 6%);
   border-radius: 12px;
 }
 
@@ -4401,15 +4394,15 @@ body.music-on .score-legend {
 
 /* Faded (from «A prop» on): the current card is still framed, but quietly. */
 .play-view.faded .score-tile.now {
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 35%);
+  box-shadow: 0 0 0 2px rgb(31 30 28 / 28%);
 }
 
 .route-transfer {
   margin: 0 0 10px;
   padding: 8px 12px;
   font-size: 14px;
-  color: #d6dbe3;
-  background: rgb(255 255 255 / 5%);
+  color: var(--play-ink);
+  background: rgb(31 30 28 / 4%);
   border-left: 3px solid var(--c, #1fb6e3);
   border-radius: 0 10px 10px 0;
 }
@@ -4431,12 +4424,12 @@ body.music-on .score-legend {
 
 .play-choices.sub {
   padding: 10px;
-  background: rgb(0 0 0 / 18%);
+  background: rgb(0 0 0 / 4%);
   border-radius: 14px;
 }
 
 .play-choice.change .choice-icon {
-  background: rgb(255 255 255 / 14%);
+  background: rgb(31 30 28 / 11%);
 }
 
 .play-choice.change.open {
@@ -4468,7 +4461,7 @@ body.music-on .score-legend {
   font-weight: 700;
   line-height: 1;
   color: var(--play-muted);
-  background: rgb(255 255 255 / 6%);
+  background: rgb(31 30 28 / 5%);
   border: 2px solid var(--play-line);
   border-radius: 50%;
   cursor: pointer;
@@ -4506,3 +4499,67 @@ body.music-on .score-legend {
 body.music-on .step-strip {
   display: none;
 }
+
+/* ---- Pòster «Full de ruta»: el mateix que l'imprès de la línia Rockin (fons blau nit, Poppins i Noto Sans Black) ---- */
+.poster {
+  --pnit: #0b1120;
+  --pvora: #334155;
+  --play-ink: #f8fafc;
+  --play-muted: #cbd5e1;
+  --play-panel: #1e293b;
+  --play-line: #334155;
+  --play-yellow-ink: #fdbe10;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  color: var(--play-ink);
+  font-family: Poppins, Ubuntu, sans-serif;
+  background: radial-gradient(70% 45% at 50% 0%, #1e293b 0%, var(--pnit) 100%);
+  border: 10px solid var(--c);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.poster-piano { width: 46px; height: 46px; padding: 0 5px 5px; border-radius: 23px 23px 4px 4px; }
+.poster-piano i { width: 6px; height: 15px; }
+.poster-title { font-family: 'Noto Sans', Ubuntu, sans-serif; }
+.poster-w1 { font-size: clamp(18px, 2.2vw, 27px); font-weight: 900; letter-spacing: .04em; }
+.poster-w2 { font-size: clamp(26px, 3.2vw, 40px); font-weight: 900; letter-spacing: 0; text-shadow: none; }
+.poster-sub { padding: 3px 18px; font: 600 11px Poppins, sans-serif; letter-spacing: .45em; background: none; border: 1.5px solid var(--pvora); border-radius: 4px; }
+.poster-song { font-size: 13px; }
+.poster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 10px 14px; }
+.ptile {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 14px; align-items: center;
+  min-height: 0; padding: 8px 16px; background: #1e293b; border: 1.5px solid var(--pvora); border-radius: 12px; font-family: Poppins, sans-serif;
+}
+.ptile:hover, .ptile:focus-visible { transform: none; }
+.ptile.cur { box-shadow: inset 0 0 0 1px var(--c); border-color: var(--c); }
+.ptile-top { display: contents; }
+.ptile-num { grid-row: 1 / 4; grid-column: 1; width: 40px; height: 40px; font: 800 19px Poppins, sans-serif; border-bottom-width: 4px; border-radius: 8px; }
+.ptile .ptile-icon { grid-row: 1 / 4; grid-column: 3; color: var(--c); }
+.ptile b { grid-column: 2; font: 700 15px/1.15 Poppins, sans-serif; letter-spacing: 0; }
+.ptile small { grid-column: 2; font: 500 12.5px/1.3 Poppins, sans-serif; color: var(--play-muted); }
+.ptile-foot { grid-column: 2; margin-top: 4px; }
+.ptile-foot .pbar { max-width: 220px; height: 4px; background: var(--pvora); }
+.ptile-foot em { font: 500 11px Poppins, sans-serif; color: var(--play-muted); }
+.poster-foot { padding-top: 6px; border-top: 0; }
+.poster-logo { height: 20px; }
+.poster-foot em { font: 600 italic 19px Poppins, sans-serif; }
+.poster-level { background: #1e293b; border: 1.5px solid var(--pvora); }
+.poster .route-step { background: rgb(255 255 255 / 4%); }
+.poster .route-step-text small { color: var(--play-muted); }
+.poster .route-transfer { color: var(--play-ink); background: rgb(255 255 255 / 5%); }
+@media (max-width: 760px) {
+  .poster-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
+}
+
+/* Icones de línia (js/icones.js), en lloc d'emojis */
+.ic { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.2em; flex: none; }
+.ptile-icon .ic { width: 24px; height: 24px; stroke-width: 2; }
+.play-song-icon .ic, .choice-icon .ic { width: 22px; height: 22px; }
+.welcome-art .ic { width: 64px; height: 64px; stroke-width: 1.5; }
+.play-hands-art .ic { width: 40px; height: 40px; stroke-width: 1.5; }
+.play-world-number .ic { width: 16px; height: 16px; }
+.score-hand .ic { width: 28px; height: 28px; }
+.gicon .ic { width: 18px; height: 18px; }
+.door-icon .ic { width: 28px; height: 28px; }
