@@ -2817,6 +2817,7 @@ button.play-hands-chip b {
   gap: 8px;
   box-sizing: border-box;
   height: 100vh;
+  height: 100dvh;
   max-width: none;
   overflow: hidden;
   padding: 10px 14px;
@@ -3026,6 +3027,7 @@ button.play-hands-chip b {
 .play-chip-big {
   display: grid;
   gap: 2px;
+  color: var(--play-ink);
   flex: 1 1 200px;
   padding: 10px 14px;
   text-align: left;
@@ -4609,3 +4611,12 @@ body.music-on .step-strip {
 .qsf-estrat h3, .qsf-dreta h3 { margin: 0 0 6px; }
 .qsf-kpi { background: var(--play-panel); }
 .qsf-hist { overflow-x: auto; }
+
+/* ---- Mòbil: el botó del pòster a sobre i el panell del pas a tota l'amplada ---- */
+@media (max-width: 640px) {
+  .play-top { flex-direction: column; align-items: stretch; gap: 10px; }
+  .play-top > .play-btn { align-self: flex-start; }
+}
+@media (hover: none) and (pointer: coarse) {
+  kbd { display: none !important; }
+}
