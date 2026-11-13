@@ -220,7 +220,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   const homeScreen = () => (section === 'ruta' ? 'ruta' : section === 'cancons' ? 'songs' : section === 'banda' ? 'jam' : section === 'improvisa' ? 'improv' : 'map');
   let path = ROCKIN_PATH;
   let screen = 'map'; // map | creator | teacher | who | welcome
-  let board = ['taller', 'adapt'].includes(storage.get('rockin.play.board')) ? storage.get('rockin.play.board') : 'cami'; // which map the student sees
+  let board = storage.get('rockin.play.board') === 'taller' ? 'taller' : 'adapt'; // which board the student sees in «Juga» (the classic path is gone: «On soc?» or the workshop)
   let songBoard = storage.get('rockin.play.songBoard') === 'adapt' ? 'adapt' : 'cami'; // the same for a song
 
   // ---- Layout -----------------------------------------------------------------------------------
@@ -928,14 +928,18 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       });
       return b;
     };
-    if (!songs) return el('div', { className: 'play-board-tabs' }, [tab('cami', 'El camí'), tab('adapt', 'Camí intel·ligent'), tab('taller', 'Taller d\'acords')]);
+    if (!songs) return el('div', { className: 'play-board-tabs' }, [
+      button('← Full de ruta', () => { section = 'ruta'; screen = 'ruta'; showMap(); }, 'ghost'),
+      tab('adapt', 'On soc? · en proves'),
+      tab('taller', 'Taller d\'acords'),
+    ]);
     return el('div', { className: 'play-board-tabs' }, [
       button('← Totes les cançons', () => {
         screen = 'songs';
         showMap();
       }, 'ghost'),
       tab('cami', 'El camí'),
-      tab('adapt', 'Camí intel·ligent'),
+      tab('adapt', 'On soc? · en proves'),
       button('Fitxa', () => printSheet(), 'ghost small'),
       button('Biblioteca', () => {
         jumpToLibrary = true;
@@ -1345,10 +1349,12 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     ]);
     const tools = el('div', { className: 'route-tools' }, [
       button('Què sé fer', () => { backpackTab = 'banda'; screen = 'backpack'; showMap(); }, 'ghost small'),
-      button('Com t’estudies', () => { backpackTab = 'com'; screen = 'backpack'; showMap(); }, 'ghost small'),
+      button('Com practiques', () => { backpackTab = 'com'; screen = 'backpack'; showMap(); }, 'ghost small'),
       button('Prova de nivell', () => placementTest(), 'ghost small'),
       handsChip(),
-      button('Camí clàssic', () => { section = 'juga'; screen = 'map'; showMap(); }, 'ghost small'),
+      button('On soc? (en proves)', () => { section = 'juga'; board = 'adapt'; storage.set('rockin.play.board', 'adapt'); screen = 'map'; showMap(); }, 'ghost small'),
+      button('Taller d\'acords', () => { section = 'juga'; board = 'taller'; storage.set('rockin.play.board', 'taller'); screen = 'map'; showMap(); }, 'ghost small'),
+      button('Professorat', () => { screen = 'teacher'; showMap(); }, 'ghost small'),
     ]);
     const foot = el('div', { className: 'poster-foot' }, [
       el('img', { src: 'assets/brand/rockin-wordmark-dark.png', alt: 'ROCKIN', className: 'poster-logo' }),
@@ -1768,14 +1774,14 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   }
   const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
   const capFirst = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  /** «Com vas»: primer, com t'estudies (com et va l'intent següent després de cada estratègia que tries). */
+  /** «Com vas»: primer, com practiques (com et va l'intent següent després de cada estratègia que tries). */
   function comVasBox(entries, store) {
     const all = (me()?.choices ?? []).filter((c) => c.title);
     const D = all.filter((c) => c.choice && c.choice !== 'done');
     const dies = new Set(all.map((c) => new Date(c.t).toISOString().slice(0, 10))).size;
     const fets = entries.filter((e) => store[e.key]?.best === 'ok').length;
     const kpi = (v, s) => el('div', { className: 'qsf-kpi', innerHTML: `<b>${v}</b><span>${s}</span>` });
-    const intro = '<h3>Com t’estudies</h3><p class="play-note">Quan acabes un pas, tries com continuar: baixar el tempo, posar ajuda, practicar només el que falla… Aquí veus quines d’aquestes estratègies t’ajuden a millorar. El que compta és com et va l’intent següent.</p>';
+    const intro = '<h3>Com practiques</h3><p class="play-note">Quan acabes un pas, tries com continuar: baixar el tempo, posar ajuda, practicar només el que falla… Aquí veus quines d’aquestes estratègies t’ajuden a millorar. El que compta és com et va l’intent següent.</p>';
     let html;
     if (D.length < CHOICES_MIN) html = `${intro}<p class="qsf-buit">Has triat ${D.length} ${D.length === 1 ? 'vegada' : 'vegades'}. A partir de ${CHOICES_MIN} tries, aquí veuràs què et funciona.</p>`;
     else {
@@ -2444,7 +2450,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       ]);
     });
     return el('div', { className: 'play-world' }, [
-      el('h3', { textContent: 'Camí intel·ligent: què sap cada alumne' }),
+      el('h3', { textContent: '«On soc?»: què sap cada alumne' }),
       el('p', { className: 'play-note', textContent: '«Sap» compta els aprenentatges demostrats o deduïts (notes, llegir cartes, cada acord, cada canvi, la roda a tempo, els ritmes, la banda…).' }),
       ...blocks,
     ]);
@@ -4275,7 +4281,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
     render();
   }
 
-  // ---- Adaptive path ("Camí intel·ligent") ------------------------------------------------------------
+  // ---- Adaptive path («On soc?») ------------------------------------------------------------
   // The same skills as the path (notes, cards, each chord, each change, tempo,
   // patterns…), but the game tests and decides what comes next (js/adaptive.js).
 
@@ -4368,7 +4374,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
   const adaptiveWorld = (kit) => ({
     ...(kit.hands ? { twoHands: true, left: kit.hands } : {}),
     id: `adapt:${kit.key}`,
-    title: 'Camí intel·ligent',
+    title: 'On soc?',
     goal: `Tocar ${kit.wheel.map(chordName).join(' – ')} seguint les cartes`,
     progression: kit.wheel.join(' | '),
     chords: [...new Set(kit.wheel)],
@@ -4655,7 +4661,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       boardTabs(),
       el('div', { className: 'play-hello' }, [
         el('div', { className: 'play-hello-text' }, [
-          el('div', { className: 'play-kicker', textContent: `Camí intel·ligent${kit.key.startsWith('rockin') ? '' : ` · ${kit.title}`}` }),
+          el('div', { className: 'play-kicker', textContent: `On soc? · en proves${kit.key.startsWith('rockin') ? '' : ` · ${kit.title}`}` }),
           el('h2', { textContent: `Hola, ${st.name}!` }),
           handsChip(),
           el('p', { className: 'play-note', textContent: fresh
@@ -4693,7 +4699,7 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
           showMap();
         }, 'ghost small'),
         fresh ? null : button('↺ Torna a començar', () => {
-          if (!window.confirm('Esborrar el que el camí intel·ligent sap de tu i tornar a començar?')) return;
+          if (!window.confirm('Esborrar el que «On soc?» sap de tu i tornar a començar?')) return;
           st.adaptive[kit.key] = emptyState();
           saveStore();
           showMap();

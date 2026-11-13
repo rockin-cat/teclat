@@ -25,7 +25,7 @@ const SECTIONS = [
       </ul>
       <h4>La portada</h4>
       <ul>
-        <li><b>Juga</b>: el joc guiat per als alumnes (camí, camí intel·ligent i taller d'acords).</li>
+        <li><b>Full de ruta</b>: el pòster de nivells sobre la cançó de cadascú. Des d'aquí s'obren <b>On soc?</b> (en proves), el <b>Taller d'acords</b> i el panell del <b>Professorat</b>.</li>
         <li><b>Cançons</b>: camins per a cada cançó (les del llibre ROCKIN, cançons conegudes i les que creeu).</li>
         <li><b>Sessió</b>: per treballar a classe amb qualsevol progressió i totes les opcions.</li>
       </ul>`,
@@ -193,9 +193,9 @@ const SECTIONS = [
   {
     id: 'intelligent',
     icon: '🧭',
-    title: 'Camí intel·ligent',
+    title: 'On soc? (en proves)',
     html: `
-      <p>Segona pestanya del mapa de Juga i del mapa de cada cançó. Treballa els mateixos aprenentatges que el camí, però <b>sense un ordre fix</b>: el joc va provant què se sap i tria el repte següent.</p>
+      <p>En proves. S'hi entra des del full de ruta (botó «On soc?») i des del mapa de cada cançó. Treballa els mateixos aprenentatges que el camí, però <b>sense un ordre fix</b>: el joc va provant què se sap i tria el repte següent.</p>
       <p>Durant els reptes, a la barra de dalt hi ha sempre <b>↩ Més fàcil</b> (baixa una etapa), <b>Salta</b> (passa endavant i deixa aquest repte per a més tard) i <b>El meu camí</b> (surt al mapa de coneixements): no es queda mai tancat dins la roda d'avaluació.</p>
       <h4>Els aprenentatges (per etapes)</h4>
       <ol>
@@ -238,7 +238,7 @@ const SECTIONS = [
     icon: '🎹',
     title: "Taller d'acords",
     html: `
-      <p>Tercera pestanya de Juga. Jocs curts, sempre oberts, amb una pregunta gran i poc text:</p>
+      <p>S'hi entra des del full de ruta, amb el botó «Taller d'acords». Jocs curts, sempre oberts, amb una pregunta gran i poc text:</p>
       <ul>
         <li><b>Troba la nota</b>: tecles blanques amb nom, sense nom i tecles negres. Després de dues errades es pinten.</li>
         <li><b>Salta tecles</b>: des d'una tecla groga, saltar 1–4 tecles (els números apareixen un a un).</li>
@@ -259,7 +259,7 @@ const SECTIONS = [
       </ul>
       <h4>El mapa d'una cançó</h4>
       <ul>
-        <li>Pestanyes: <b>El camí</b> i <b>Camí intel·ligent</b>. «Fitxa» imprimeix la fitxa de la cançó.</li>
+        <li>Pestanyes: <b>El camí</b> i <b>On soc?</b> (en proves). «Fitxa» imprimeix la fitxa de la cançó.</li>
         <li>Les cançons del llibre mostren <b>la graella</b>: una fila per part, amb els acords pintats pel seu grau.</li>
         <li>Els mons: aprendre la roda (cada acord i cada canvi), la roda amb ritme, la cançó (acords o canvis nous de les altres parts, «La part X pas a pas» i <b>La cançó sencera</b> amb totes les parts en ordre) i les inversions.</li>
         <li><b>Desbloqueja-ho tot</b> (a la llista i als mapes): entra en mode professor per provar tots els camins.</li>
@@ -270,7 +270,7 @@ const SECTIONS = [
     icon: '✨',
     title: 'Improvisa',
     html: `
-      <p>Porta de la portada. Aquí no hi ha cartes, ni nivells, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
+      <p>Ara és dins del full de ruta: els nivells 9 (solo) i 10 (improvisació) fan servir aquestes maneres. Aquí no hi ha cartes, ni nivells, ni correccions: la banda toca una roda i qui juga hi inventa a sobre. Serveix per perdre la por a tocar sense partitura i per escoltar-se.</p>
       <h4>Tres maneres</h4>
       <ul>
         <li><b>Roda oberta</b>: la banda no para; s'hi toca el que es vulgui fins que es prem <b>Prou, ja he acabat</b>.</li>
@@ -342,7 +342,7 @@ const SECTIONS = [
         <li><b>Obre totes les missions a tots els alumnes</b>.</li>
         <li><b>Números de dit a les tecles pintades</b>: apagat per defecte (els números es poden confondre amb els graus). Si s'encén, surt una <b>taula de digitacions</b> amb tots els acords del joc: cada acord es pot deixar en automàtic (el número gris) o escriure-hi la digitació que vulgueu, de la nota més greu a la més aguda i per a la <b>mà dreta</b> (per exemple Si♭ = 1-2-4); l'esquerra la fa a l'inrevés.</li>
         <li><b>El meu teclat</b>: perquè el teclat de la pantalla sigui idèntic al físic, com en una app de piano. Tria la mida (25, 32, 37, 49, 61, 76 o 88 tecles) o prem <b>Detecta'l tocant</b>: toca la tecla més greu i després la més aguda, i el joc en pren nota. Es desa al navegador (és una cosa de l'ordinador, no de l'alumne). «Automàtic» torna a ensenyar les tecles que caben a la pantalla. Amb teclats petits, les tecles pintades que quedin fora no es veuen, però les notes compten igual en qualsevol octava.</li>
-        <li><b>Camí intel·ligent</b>: què sap cada persona, què ha de practicar i quants reptes ha fet.</li>
+        <li><b>On soc?</b>: què sap cada persona, què ha de practicar i quants reptes ha fet.</li>
         <li><b>Progrés</b> de cada camí (una taula per camí): quantes missions té a cada nivell (Ja ho tens! · A prop · En procés), barra per món, intents, últim dia, missions que costen (3 intents o més i encara «En procés»), <b>què li falta</b> (el que ha faltat a l'últim intent que no ha arribat a «Ja ho tens!»), què diuen a l'autoavaluació i el resultat de la prova de nivell. Clicant un alumne es veuen els seus últims 20 intents. Es pot canviar el nom, esborrar-lo i <b>descarregar un CSV</b>.</li>
       </ul>
       <h4>On es guarden les dades</h4>
