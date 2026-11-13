@@ -969,7 +969,9 @@ export function createPlay({ root, getCards, playNotes, getLabels, getHeld, hasM
       path = ROCKIN_PATH;
     } else {
       if (['songs', 'creator', 'jam', 'improv', 'ruta', 'ruta-song', 'decisions', 'backpack'].includes(screen)) screen = 'map';
-      path = board === 'taller' && screen === 'map' ? WORKSHOP_PATH : handsPath(ROCKIN_PATH);
+      // «On soc?» treballa sobre la cançó del full de ruta (la roda ROCKIN si no se n'ha triat cap)
+      const onSocPath = () => (routeSpec() === ROCKIN_WHEEL_SPEC ? ROCKIN_PATH : routePaths().one);
+      path = board === 'taller' && screen === 'map' ? WORKSHOP_PATH : handsPath(board === 'adapt' ? onSocPath() : ROCKIN_PATH);
     }
     if (screen === 'who') return showWho();
     if (['ruta', 'ruta-song', 'decisions', 'backpack'].includes(screen) && me() && !me().hands && !me().teacher) screen = 'hands';
